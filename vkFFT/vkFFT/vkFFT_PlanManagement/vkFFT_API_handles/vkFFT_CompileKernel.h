@@ -184,21 +184,24 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 		
 		//DvdB
 		
-		app->configuration.dirkKernelCounter++;
-        const char* dname = app->configuration.dirkName;
+		const char* dname = app->configuration.dirkName;
         //const char* teststr = "HELLOOOOOOO";
         ofstream myfile;
-        std::string fname = "kernel_" ;
-        fname += dname ;
+        std::string fname = "";
+		
+		fname += dname ;
+		fname += "_kernel_";
 		//fname += ".txt";
-        fname += "_"+ std::to_string(app->configuration.dirkKernelCounter) +".txt";
-        myfile.open(fname);
+        fname += std::to_string(app->configuration.dirkKernelCounter) +".txt";
+        
+		myfile.open(fname);
 		//app->configuration.dirkName = "DIRKDIRK";
         //myfile << app->configuration.dirkName;
         myfile << code0;
 		//myfile << teststr;
 		myfile.close();
-		
+		app->configuration.dirkKernelCounter++;
+        
 		
 		
 		
