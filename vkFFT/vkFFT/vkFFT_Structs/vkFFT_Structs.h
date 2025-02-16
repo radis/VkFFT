@@ -323,6 +323,9 @@ typedef struct {
 #endif
 	pfUINT dirkKernelCounter;
 	const char* dirkName;
+	pfUINT dirkTypeFFT;
+	pfUINT dirkCurAxis;
+	pfUINT dirkDispatchCounter;
 } VkFFTConfiguration;//parameters specified at plan creation
 
 typedef struct {
@@ -786,6 +789,7 @@ typedef struct {
 	PfContainer inputOffset;
 	PfContainer kernelOffset;
 	PfContainer outputOffset;
+	PfContainer currentBatch;
 	int reorderFourStep;
 	int storeSharedComplexComponentsSeparately;
 	int pushConstantsStructSize;
@@ -793,6 +797,7 @@ typedef struct {
 	int performPostCompilationInputOffset;
 	int performPostCompilationOutputOffset;
 	int performPostCompilationKernelOffset;
+	int performPostCompilationCurrentBatch;
 	pfUINT inputBufferBlockNum;
 	pfUINT inputBufferBlockSize;
 	pfUINT outputBufferBlockNum;
@@ -1032,6 +1037,9 @@ typedef struct {
 
 	pfUINT performPostCompilationKernelOffset;
 	pfUINT kernelOffset;
+
+	pfUINT performPostCompilationCurrentBatch;
+	pfUINT currentBatch;
 
 	pfUINT structSize;
 } VkFFTPushConstantsLayout;

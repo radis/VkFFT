@@ -23,7 +23,7 @@
 #define VKFFT_COMPILEKERNEL_H
 #include "vkFFT/vkFFT_Structs/vkFFT_Structs.h"
 #include <iostream> //DvdB
-#include <string>  //DvdV
+#include <string>  //DvdB
 
 
 static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* axis) {
@@ -197,6 +197,7 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 		myfile.open(fname);
 		//app->configuration.dirkName = "DIRKDIRK";
         //myfile << app->configuration.dirkName;
+		myfile << "// kernel type: " << app->configuration.dirkTypeFFT <<endl;
         myfile << code0;
 		//myfile << teststr;
 		myfile.close();

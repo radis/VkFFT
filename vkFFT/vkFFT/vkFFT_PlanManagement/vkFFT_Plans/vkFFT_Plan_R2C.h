@@ -137,6 +137,8 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 	if (app->configuration.specifyOffsetsAtLaunch) {
 		axis->specializationConstants.performPostCompilationInputOffset = 1;
 		axis->specializationConstants.performPostCompilationOutputOffset = 1;
+		axis->specializationConstants.performPostCompilationCurrentBatch = 1;
+
 		if (app->configuration.performConvolution)
 			axis->specializationConstants.performPostCompilationKernelOffset = 1;
 	}
@@ -289,6 +291,10 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 				axis->pushConstants.performPostCompilationKernelOffset = 1;
 				axis->pushConstants.structSize += 1;
 			}
+			if (axis->specializationConstants.performPostCompilationCurrentBatch) {
+				axis->pushConstants.performPostCompilationCurrentBatch = 1;
+				axis->pushConstants.structSize += 1;
+			}
 			if (app->configuration.useUint64)
 				axis->pushConstants.structSize *= sizeof(pfUINT);
 			else
@@ -358,6 +364,7 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 			deleteVkFFT(app);
 			return resFFT;
 		}
+		app->configuration.dirkTypeFFT = 200000;
 		resFFT = VkFFT_CompileKernel(app, axis);
 		if (resFFT != VKFFT_SUCCESS) {
 			deleteVkFFT(app);

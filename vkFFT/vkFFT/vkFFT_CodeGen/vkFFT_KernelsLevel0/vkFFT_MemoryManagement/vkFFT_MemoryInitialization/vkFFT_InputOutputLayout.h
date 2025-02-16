@@ -41,10 +41,18 @@ static inline void appendInputLayoutVkFFT(VkFFTSpecializationConstantsLayout* sc
 	int typeSize = ((sc->inputMemoryCode % 10) == 3) ? sc->complexSize : sc->complexSize / 2;
 #if(VKFFT_BACKEND==0)
 	if (sc->inputBufferBlockNum == 1) {
-		sc->tempLen = sprintf(sc->tempStr, "\
+/*		sc->tempLen = sprintf(sc->tempStr, "\
 layout(std430, binding = %d) buffer DataIn{\n\
 	%s inputs[%" PRIu64 "];\n\
 };\n\n", id, inputMemoryType->name, sc->inputBufferBlockSize / typeSize);
+*/
+//DvdB
+		sc->tempLen = sprintf(sc->tempStr, "\
+layout(std430, binding = %d) buffer DataIn{\n\
+	%s inputs[];\n\
+};\n\n", id, inputMemoryType->name);
+
+
 		PfAppendLine(sc);
 	}
 	else {
@@ -68,11 +76,19 @@ static inline void appendOutputLayoutVkFFT(VkFFTSpecializationConstantsLayout* s
 	int typeSize = ((sc->outputMemoryCode % 10) == 3) ? sc->complexSize : sc->complexSize / 2;
 #if(VKFFT_BACKEND==0)
 	if (sc->inputBufferBlockNum == 1) {
-		sc->tempLen = sprintf(sc->tempStr, "\
+/*		sc->tempLen = sprintf(sc->tempStr, "\
 layout(std430, binding = %d) buffer DataOut{\n\
 	%s outputs[%" PRIu64 "];\n\
 };\n\n", id, outputMemoryType->name, sc->outputBufferBlockSize / typeSize);
-		PfAppendLine(sc);
+*/
+//DvdB	
+		sc->tempLen = sprintf(sc->tempStr, "\
+layout(std430, binding = %d) buffer DataOut{\n\
+	%s outputs[];\n\
+};\n\n", id, outputMemoryType->name);
+
+
+	PfAppendLine(sc);
 	}
 	else {
 		sc->tempLen = sprintf(sc->tempStr, "\

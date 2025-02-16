@@ -968,6 +968,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 
 //DvdB
 	app->configuration.dirkKernelCounter = 0;
+	app->configuration.dirkDispatchCounter = 0;
 	if (inputLaunchConfiguration.dirkName != nullptr){
 		app->configuration.dirkName = inputLaunchConfiguration.dirkName;
 	}
