@@ -911,7 +911,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 		return VKFFT_ERROR_INVALID_QUEUE;
 	}
 	app->configuration.queue = inputLaunchConfiguration.queue;
-
+	
 	const char dummy_kernel[50] = "kernel void VkFFT_dummy (){}";
 	const char function_name[20] = "VkFFT_dummy";
 
@@ -965,6 +965,12 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 	str_code->release();
 	compileOptions->release();
 #endif
+
+//DvdB
+	app->configuration.dirkKernelCounter = 0;
+	if (inputLaunchConfiguration.dirkName != nullptr){
+		app->configuration.dirkName = inputLaunchConfiguration.dirkName;
+	}
 
 	resFFT = initializeBluesteinAutoPadding(app);
 	if (resFFT != VKFFT_SUCCESS) {

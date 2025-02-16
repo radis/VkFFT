@@ -22,6 +22,9 @@
 #ifndef VKFFT_COMPILEKERNEL_H
 #define VKFFT_COMPILEKERNEL_H
 #include "vkFFT/vkFFT_Structs/vkFFT_Structs.h"
+#include <iostream> //DvdB
+#include <string>  //DvdV
+
 
 static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* axis) {
 #if(VKFFT_BACKEND==0)
@@ -177,6 +180,31 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 			GLSLANG_MSG_DEFAULT_BIT,
 			(const glslang_resource_t*)&default_resource,
 		};
+		
+		
+		//DvdB
+		
+		app->configuration.dirkKernelCounter++;
+        const char* dname = app->configuration.dirkName;
+        //const char* teststr = "HELLOOOOOOO";
+        ofstream myfile;
+        std::string fname = "kernel_" ;
+        fname += dname ;
+		//fname += ".txt";
+        fname += "_"+ std::to_string(app->configuration.dirkKernelCounter) +".txt";
+        myfile.open(fname);
+		//app->configuration.dirkName = "DIRKDIRK";
+        //myfile << app->configuration.dirkName;
+        myfile << code0;
+		//myfile << teststr;
+		myfile.close();
+		
+		
+		
+		
+		
+		
+		
 		//printf("%s\n", code0);
 		glslang_shader_t* shader = glslang_shader_create((const glslang_input_t*)&input);
 		const char* err;
