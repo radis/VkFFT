@@ -133,11 +133,11 @@ static inline VkFFTResult VkFFT_DispatchPlan(VkFFTApplication* app, VkFFTAxis* a
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(pfUINT));
 							offset += sizeof(pfUINT);
 						}
-						if (axis->specializationConstants.performPostCompilationCurrentBatch) {
-							temp = axis->specializationConstants.currentBatch.data.i;
-							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(pfUINT));
-							offset += sizeof(pfUINT);
-						}
+						// if (axis->specializationConstants.performPostCompilationCurrentBatch) {
+							// temp = axis->specializationConstants.currentBatch.data.i;
+							// memcpy(&axis->pushConstants.data[offset], &temp, sizeof(pfUINT));
+							// offset += sizeof(pfUINT);
+						// }
 					}
 					else {
 						pfUINT offset = 0;
@@ -175,11 +175,11 @@ static inline VkFFTResult VkFFT_DispatchPlan(VkFFTApplication* app, VkFFTAxis* a
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint32_t));
 							offset += sizeof(uint32_t);
 						}
-						if (axis->specializationConstants.performPostCompilationCurrentBatch) {
-							temp = (uint32_t)(axis->specializationConstants.currentBatch.data.i);
-							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint32_t));
-							offset += sizeof(uint32_t);
-						}
+						// if (axis->specializationConstants.performPostCompilationCurrentBatch) {
+							// temp = (uint32_t)(axis->specializationConstants.currentBatch.data.i);
+							// memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint32_t));
+							// offset += sizeof(uint32_t);
+						// }
 					}
 				}
 				dispatchSize[0] = (i == blockNumber[0] - 1) ? lastBlockSize[0] : blockSize[0];

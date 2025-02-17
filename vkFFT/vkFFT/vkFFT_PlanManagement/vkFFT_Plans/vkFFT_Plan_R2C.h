@@ -137,7 +137,7 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 	if (app->configuration.specifyOffsetsAtLaunch) {
 		axis->specializationConstants.performPostCompilationInputOffset = 1;
 		axis->specializationConstants.performPostCompilationOutputOffset = 1;
-		axis->specializationConstants.performPostCompilationCurrentBatch = 1;
+		//axis->specializationConstants.performPostCompilationCurrentBatch = 1;
 
 		if (app->configuration.performConvolution)
 			axis->specializationConstants.performPostCompilationKernelOffset = 1;
@@ -258,6 +258,9 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 			else
 				axis->specializationConstants.zeropad[1] = 0;
 		}*/
+		if (app->configuration.dynamicBatch){
+			axis->specializationConstants.dynamicBatch = 1;
+		}
 		if ((app->configuration.FFTdim == 1) && (app->configuration.performConvolution)) {
 			axis->specializationConstants.convolutionStep = 1;
 		}
@@ -291,10 +294,10 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 				axis->pushConstants.performPostCompilationKernelOffset = 1;
 				axis->pushConstants.structSize += 1;
 			}
-			if (axis->specializationConstants.performPostCompilationCurrentBatch) {
-				axis->pushConstants.performPostCompilationCurrentBatch = 1;
-				axis->pushConstants.structSize += 1;
-			}
+			// if (axis->specializationConstants.performPostCompilationCurrentBatch) {
+				// axis->pushConstants.performPostCompilationCurrentBatch = 1;
+				// axis->pushConstants.structSize += 1;
+			// }
 			if (app->configuration.useUint64)
 				axis->pushConstants.structSize *= sizeof(pfUINT);
 			else

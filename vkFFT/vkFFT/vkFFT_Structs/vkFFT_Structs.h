@@ -143,6 +143,7 @@ typedef struct {
 	pfUINT* inputBufferSize;//array of input buffers sizes in bytes, if isInputFormatted is enabled
 	pfUINT* outputBufferSize;//array of output buffers sizes in bytes, if isOutputFormatted is enabled
 	pfUINT* kernelSize;//array of kernel buffers sizes in bytes, if performConvolution is enabled
+	pfUINT currentBatchUBOSize;
 
 #if(VKFFT_BACKEND==0)
 	VkBuffer* buffer;//pointer to array of buffers (or one buffer) used for computations
@@ -150,6 +151,8 @@ typedef struct {
 	VkBuffer* inputBuffer;//pointer to array of input buffers (or one buffer) used to read data from if isInputFormatted is enabled
 	VkBuffer* outputBuffer;//pointer to array of output buffers (or one buffer) used for write data to if isOutputFormatted is enabled
 	VkBuffer* kernel;//pointer to array of kernel buffers (or one buffer) used for read kernel data from if performConvolution is enabled
+	VkBuffer currentBatchUBO;
+	
 #elif(VKFFT_BACKEND==1)
 	void** buffer;//pointer to device buffer used for computations
 	void** tempBuffer;//needed if reorderFourStep is enabled to transpose the array. Same size as buffer. Default 0. Setting to non zero value enables manual user allocation
@@ -321,6 +324,7 @@ typedef struct {
 	MTL::CommandBuffer* commandBuffer;//Filled at app execution
 	MTL::ComputeCommandEncoder* commandEncoder;//Filled at app execution
 #endif
+	pfUINT dynamicBatch;
 	pfUINT dirkKernelCounter;
 	const char* dirkName;
 	pfUINT dirkTypeFFT;
@@ -789,7 +793,7 @@ typedef struct {
 	PfContainer inputOffset;
 	PfContainer kernelOffset;
 	PfContainer outputOffset;
-	PfContainer currentBatch;
+	//PfContainer currentBatch;
 	int reorderFourStep;
 	int storeSharedComplexComponentsSeparately;
 	int pushConstantsStructSize;
@@ -797,7 +801,7 @@ typedef struct {
 	int performPostCompilationInputOffset;
 	int performPostCompilationOutputOffset;
 	int performPostCompilationKernelOffset;
-	int performPostCompilationCurrentBatch;
+	//int performPostCompilationCurrentBatch;
 	pfUINT inputBufferBlockNum;
 	pfUINT inputBufferBlockSize;
 	pfUINT outputBufferBlockNum;
@@ -822,6 +826,7 @@ typedef struct {
 	
 	int swapComputeWorkGroupID;
 	int convolutionStep;
+	int dynamicBatch;
 	int symmetricKernel;
 	int supportAxis;
 	int cacheShuffle;
@@ -843,6 +848,7 @@ typedef struct {
 	int forceCallbackVersionRealTransforms;
 
 	int numBuffersBound[10];
+	int currentBatchBindingID;
 	int convolutionBindingID;
 	int LUTBindingID;
 	int BluesteinConvolutionBindingID;
@@ -1005,6 +1011,7 @@ typedef struct {
 	//int outputType;
 	PfContainer inputsStruct;
 	PfContainer outputsStruct;
+	PfContainer batchStruct;
 	PfContainer kernelStruct;
 	PfContainer sdataStruct;
 	PfContainer LUTStruct;
@@ -1038,8 +1045,8 @@ typedef struct {
 	pfUINT performPostCompilationKernelOffset;
 	pfUINT kernelOffset;
 
-	pfUINT performPostCompilationCurrentBatch;
-	pfUINT currentBatch;
+	//pfUINT performPostCompilationCurrentBatch;
+	//pfUINT currentBatch;
 
 	pfUINT structSize;
 } VkFFTPushConstantsLayout;

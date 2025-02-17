@@ -967,6 +967,8 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 #endif
 
 //DvdB
+	if (inputLaunchConfiguration.dynamicBatch != 0)	app->configuration.dynamicBatch = 1;
+	
 	app->configuration.dirkKernelCounter = 0;
 	app->configuration.dirkDispatchCounter = 0;
 	if (inputLaunchConfiguration.dirkName != nullptr){
@@ -1172,6 +1174,10 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 			}
 		}
 		app->configuration.kernel = inputLaunchConfiguration.kernel;
+	}
+	if (inputLaunchConfiguration.currentBatchUBOSize !=0){
+		app->configuration.currentBatchUBOSize = inputLaunchConfiguration.currentBatchUBOSize;
+		app->configuration.currentBatchUBO = inputLaunchConfiguration.currentBatchUBO;
 	}
 
 	if (inputLaunchConfiguration.bufferOffset != 0)	app->configuration.bufferOffset = inputLaunchConfiguration.bufferOffset;
