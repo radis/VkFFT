@@ -49,7 +49,7 @@ static inline void appendKernelStart(VkFFTSpecializationConstantsLayout* sc, int
 	
 	//DvdB
 	if (sc->dynamicBatch){
-		sc->tempLen = sprintf(sc->tempStr, "if (gl_WorkGroupID.y > currentBatch.N) return;\n");
+		sc->tempLen = sprintf(sc->tempStr, "if (gl_WorkGroupID.y >= currentBatch.N) return;\n");
 		PfAppendLine(sc);
 	}
 #elif(VKFFT_BACKEND==1)
@@ -282,7 +282,7 @@ static inline void appendKernelStart_R2C(VkFFTSpecializationConstantsLayout* sc,
 	
 	//DvdB
 	if (sc->dynamicBatch){
-		sc->tempLen = sprintf(sc->tempStr, "if (gl_WorkGroupID.z > currentBatch.N) return;\n");
+		sc->tempLen = sprintf(sc->tempStr, "if (gl_WorkGroupID.z >= currentBatch.N) return;\n");
 		PfAppendLine(sc);
 	}
 #elif(VKFFT_BACKEND==1)
