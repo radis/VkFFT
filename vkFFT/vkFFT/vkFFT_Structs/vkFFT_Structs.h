@@ -189,6 +189,7 @@ typedef struct {
 	pfUINT inputBufferOffset;//specify if VkFFT has to offset the first element position inside the input buffer. In bytes. Default 0 
 	pfUINT outputBufferOffset;//specify if VkFFT has to offset the first element position inside the output buffer. In bytes. Default 0
 	pfUINT kernelOffset;//specify if VkFFT has to offset the first element position inside the kernel. In bytes. Default 0
+	pfUINT currentBatchUBOOffset;
 	pfUINT specifyOffsetsAtLaunch;//specify if offsets will be selected with launch parameters VkFFTLaunchParams (0 - off, 1 - on). Default 0
 
 	//optional: (default 0 if not stated otherwise)

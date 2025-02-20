@@ -1162,7 +1162,7 @@ static inline VkFFTResult VkFFTUpdateBufferSet(VkFFTApplication* app, VkFFTPlan*
 
 
 						descriptorBufferInfo.buffer = app->configuration.currentBatchUBO;
-						descriptorBufferInfo.offset = 0;
+						descriptorBufferInfo.offset = app->configuration.currentBatchUBOOffset;
 						descriptorBufferInfo.range = app->configuration.currentBatchUBOSize;
 					}
 #endif
@@ -1628,7 +1628,7 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 						myfile2.close();
 
 						descriptorBufferInfo.buffer = app->configuration.currentBatchUBO;
-						descriptorBufferInfo.offset = 0;
+						descriptorBufferInfo.offset = app->configuration.currentBatchUBOOffset;
 						descriptorBufferInfo.range = app->configuration.currentBatchUBOSize;
 					}
 #endif

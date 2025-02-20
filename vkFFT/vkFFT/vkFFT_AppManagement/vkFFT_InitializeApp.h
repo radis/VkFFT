@@ -1178,6 +1178,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 	if (inputLaunchConfiguration.currentBatchUBOSize !=0){
 		app->configuration.currentBatchUBOSize = inputLaunchConfiguration.currentBatchUBOSize;
 		app->configuration.currentBatchUBO = inputLaunchConfiguration.currentBatchUBO;
+		app->configuration.currentBatchUBOOffset = inputLaunchConfiguration.currentBatchUBOOffset;
 	}
 
 	if (inputLaunchConfiguration.bufferOffset != 0)	app->configuration.bufferOffset = inputLaunchConfiguration.bufferOffset;
