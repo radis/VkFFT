@@ -967,7 +967,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 #endif
 
 //DvdB
-	if (inputLaunchConfiguration.dynamicBatch != 0)	app->configuration.dynamicBatch = 1;
+	if (inputLaunchConfiguration.dynamicBatch != 0)	app->configuration.dynamicBatch = inputLaunchConfiguration.dynamicBatch;
 	
 	app->configuration.dirkKernelCounter = 0;
 	app->configuration.dirkDispatchCounter = 0;

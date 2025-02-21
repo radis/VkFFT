@@ -80,7 +80,7 @@ static inline void appendExtensions(VkFFTSpecializationConstantsLayout* sc) {
 		sc->tempLen = sprintf(sc->tempStr, "#extension GL_EXT_shader_16bit_storage : require\n\n");
 		PfAppendLine(sc);
 	}
-	if (sc->dynamicBatch) {
+	if (sc->dynamicBatch) { //Allow for std430 uniform blocks
 		sc->tempLen = sprintf(sc->tempStr, "#extension GL_EXT_scalar_block_layout : enable\n\n");
 		PfAppendLine(sc);
 	}

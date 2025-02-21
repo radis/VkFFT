@@ -564,7 +564,7 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 				axis->specializationConstants.zeropad[1] = 0;
 		}
 		if (app->configuration.dynamicBatch){
-			axis->specializationConstants.dynamicBatch = 1;
+			axis->specializationConstants.dynamicBatch = app->configuration.dynamicBatch;
 		}
 		if ((app->configuration.FFTdim - 1 == axis_id) && (axis_upload_id == 0) && (app->configuration.performConvolution)) {
 			axis->specializationConstants.convolutionStep = 1;

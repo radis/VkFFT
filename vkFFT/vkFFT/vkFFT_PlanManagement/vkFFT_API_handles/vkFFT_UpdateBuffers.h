@@ -243,7 +243,7 @@ static inline VkFFTResult VkFFTConfigureDescriptors(VkFFTApplication* app, VkFFT
 #endif
 	
 	
-	if (app->configuration.dynamicBatch == 1) {
+	if (app->configuration.dynamicBatch >= 1) {
 		axis->specializationConstants.currentBatchBindingID = (int)axis->numBindings;
 		axis->specializationConstants.numBuffersBound[axis->numBindings] = 1;
 #if(VKFFT_BACKEND==0)
@@ -588,7 +588,7 @@ static inline VkFFTResult VkFFTConfigureDescriptorsR2CMultiUploadDecomposition(V
 		axis->numBindings++;
 	}
 	
-	if (app->configuration.dynamicBatch == 1) {
+	if (app->configuration.dynamicBatch >= 1) {
 		axis->specializationConstants.currentBatchBindingID = (int)axis->numBindings;
 		axis->specializationConstants.numBuffersBound[axis->numBindings] = 1;
 #if(VKFFT_BACKEND==0)
@@ -1143,7 +1143,7 @@ static inline VkFFTResult VkFFTUpdateBufferSet(VkFFTApplication* app, VkFFTPlan*
 					}
 					//descriptorBufferInfo.offset = 0;
 				}
-				if ((i == axis->specializationConstants.currentBatchBindingID) &&(app->configuration.dynamicBatch)){
+				if ((i == axis->specializationConstants.currentBatchBindingID) && (app->configuration.dynamicBatch)){
 #if(VKFFT_BACKEND==0)
 					descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
@@ -1163,7 +1163,7 @@ static inline VkFFTResult VkFFTUpdateBufferSet(VkFFTApplication* app, VkFFTPlan*
 
 						descriptorBufferInfo.buffer = app->configuration.currentBatchUBO;
 						descriptorBufferInfo.offset = app->configuration.currentBatchUBOOffset;
-						descriptorBufferInfo.range = app->configuration.currentBatchUBOSize;
+						descriptorBufferInfo.range  = app->configuration.currentBatchUBOSize;
 					}
 #endif
 				}				
@@ -1611,7 +1611,7 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 						axis->specializationConstants.kernelOffset.data.i = app->configuration.kernelOffset;
 					}
 				}
-				if ((i == axis->specializationConstants.currentBatchBindingID) && (app->configuration.dynamicBatch == 1)) {
+				if ((i == axis->specializationConstants.currentBatchBindingID) && (app->configuration.dynamicBatch)) {
 #if(VKFFT_BACKEND==0)
 					descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 					if (axis->specializationConstants.performBufferSetUpdate) {
@@ -1629,7 +1629,7 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 
 						descriptorBufferInfo.buffer = app->configuration.currentBatchUBO;
 						descriptorBufferInfo.offset = app->configuration.currentBatchUBOOffset;
-						descriptorBufferInfo.range = app->configuration.currentBatchUBOSize;
+						descriptorBufferInfo.range  = app->configuration.currentBatchUBOSize;
 					}
 #endif
 				}
