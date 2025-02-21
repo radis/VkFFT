@@ -59,27 +59,6 @@ static inline VkFFTResult VkFFT_DispatchPlan(VkFFTApplication* app, VkFFTAxis* a
 		axis->updatePushConstants = 1;
 	}
 
-
-	
-    const char* dname = app->configuration.dirkName;
-	ofstream myfile;
-	std::string fname = "";
-	
-	fname += dname ;
-	fname += "_dispatch_";
-	fname += std::to_string(app->configuration.dirkDispatchCounter);
-	fname += ".txt";
-	
-	myfile.open(fname);
-	myfile << "Block0: "<< dispatchBlock[0] <<endl<< "Block1: "<< dispatchBlock[1] <<endl<< "Block2: "<< dispatchBlock[2] <<endl<<endl;
-	myfile << "Block0: "<< blockNumber[0] <<endl<< "Block1: "<< blockNumber[1] <<endl<< "Block2: "<< blockNumber[2] <<endl;
-
-
-	myfile.close();
-	
-	app->configuration.dirkDispatchCounter++;
-
-
 	//printf("%" PRIu64 " %" PRIu64 " %" PRIu64 "\n", dispatchBlock[0], dispatchBlock[1], dispatchBlock[2]);
 	//printf("%" PRIu64 " %" PRIu64 " %" PRIu64 "\n", blockNumber[0], blockNumber[1], blockNumber[2]);
 	for (pfUINT i = 0; i < 3; i++)

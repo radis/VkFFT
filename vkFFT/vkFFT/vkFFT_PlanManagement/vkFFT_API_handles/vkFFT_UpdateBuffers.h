@@ -1148,19 +1148,6 @@ static inline VkFFTResult VkFFTUpdateBufferSet(VkFFTApplication* app, VkFFTPlan*
 					descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
 					if (axis->specializationConstants.performBufferSetUpdate) {
-					
-						const char* dname = app->configuration.dirkName;
-						ofstream myfile;
-						std::string fname = "";
-						
-						fname += dname ;
-						fname += "_update1.txt";
-						
-						myfile.open(fname);
-						myfile << "test";
-						myfile.close();
-
-
 						descriptorBufferInfo.buffer = app->configuration.currentBatchUBO;
 						descriptorBufferInfo.offset = app->configuration.currentBatchUBOOffset;
 						descriptorBufferInfo.range  = app->configuration.currentBatchUBOSize;
@@ -1615,18 +1602,6 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 #if(VKFFT_BACKEND==0)
 					descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 					if (axis->specializationConstants.performBufferSetUpdate) {
-					
-						const char* dname2 = app->configuration.dirkName;
-						ofstream myfile2;
-						std::string fname2 = "";
-						
-						fname2 += dname2 ;
-						fname2 += "_update2.txt";
-						
-						myfile2.open(fname2);
-						myfile2 << "test";
-						myfile2.close();
-
 						descriptorBufferInfo.buffer = app->configuration.currentBatchUBO;
 						descriptorBufferInfo.offset = app->configuration.currentBatchUBOOffset;
 						descriptorBufferInfo.range  = app->configuration.currentBatchUBOSize;

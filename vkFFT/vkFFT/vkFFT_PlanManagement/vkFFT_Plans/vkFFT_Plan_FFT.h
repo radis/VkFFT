@@ -781,7 +781,6 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 			deleteVkFFT(app);
 			return resFFT;
 		}
-		app->configuration.dirkTypeFFT = 100000 + 1000*axis_id + 100*axis_upload_id+10*inverse+reverseBluesteinMultiUpload;
 		resFFT = VkFFT_CompileKernel(app, axis);
 		if (resFFT != VKFFT_SUCCESS) {
 			deleteVkFFT(app);

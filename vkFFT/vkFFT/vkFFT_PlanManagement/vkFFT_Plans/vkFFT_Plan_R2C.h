@@ -367,7 +367,6 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 			deleteVkFFT(app);
 			return resFFT;
 		}
-		app->configuration.dirkTypeFFT = 200000;
 		resFFT = VkFFT_CompileKernel(app, axis);
 		if (resFFT != VKFFT_SUCCESS) {
 			deleteVkFFT(app);
