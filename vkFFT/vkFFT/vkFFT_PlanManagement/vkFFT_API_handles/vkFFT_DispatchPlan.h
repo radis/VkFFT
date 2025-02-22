@@ -62,7 +62,7 @@ static inline VkFFTResult VkFFT_DispatchPlan(VkFFTApplication* app, VkFFTAxis* a
 	//printf("%" PRIu64 " %" PRIu64 " %" PRIu64 "\n", dispatchBlock[0], dispatchBlock[1], dispatchBlock[2]);
 	//printf("%" PRIu64 " %" PRIu64 " %" PRIu64 "\n", blockNumber[0], blockNumber[1], blockNumber[2]);
 	for (pfUINT i = 0; i < 3; i++)
-		if (blockNumber[i] == 1) blockSize[i] = dispatchBlock[i];
+		if (blockNumber[i] == 1) blockSize[i] = dispatchBlock[i];	
 	for (pfUINT i = 0; i < blockNumber[0]; i++) {
 		for (pfUINT j = 0; j < blockNumber[1]; j++) {
 			for (pfUINT k = 0; k < blockNumber[2]; k++) {
@@ -168,7 +168,22 @@ static inline VkFFTResult VkFFT_DispatchPlan(VkFFTApplication* app, VkFFTAxis* a
 				if (axis->pushConstants.structSize > 0) {
 					vkCmdPushConstants(app->configuration.commandBuffer[0], axis->pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, (uint32_t)axis->pushConstants.structSize, axis->pushConstants.data);
 				}
-				vkCmdDispatch(app->configuration.commandBuffer[0], (uint32_t)dispatchSize[0], (uint32_t)dispatchSize[1], (uint32_t)dispatchSize[2]);
+				bool indirect_dispatch = (app->configuration.indirectDispatch && app->configuration.indirectHostPointer != nullptr);
+				pfUINT indirect_offset;
+				//auto sc = axis->specializationConstants.inverse;
+				if (indirect_dispatch){
+					unsigned int* host_indirect = (unsigned int*)((char*)app->configuration.indirectHostPointer + app->configuration.indirectBufferOffset + app->indirectDispatchID*16);
+					host_indirect[0] = (uint32_t)dispatchSize[0];
+					host_indirect[1] = (uint32_t)dispatchSize[1];
+					host_indirect[2] = (uint32_t)dispatchSize[2];
+					host_indirect[3] = axis->specializationConstants.inverse + axis->specializationConstants.performR2CmultiUpload * 2;// + axis->specializationConstants.axis_upload_id * 10 + axis->specializationConstants.axis_id;
+					indirect_offset = app->configuration.indirectBufferOffset + 16*app->indirectDispatchID;
+					vkCmdDispatchIndirect(app->configuration.commandBuffer[0], app->configuration.indirectBuffer, indirect_offset);
+					app->indirectDispatchID++;
+				}
+				else {
+					vkCmdDispatch(app->configuration.commandBuffer[0], (uint32_t)dispatchSize[0], (uint32_t)dispatchSize[1], (uint32_t)dispatchSize[2]);
+				}
 #elif(VKFFT_BACKEND==1)
 				void* args[10];
 				CUresult result = CUDA_SUCCESS;
