@@ -170,7 +170,6 @@ static inline VkFFTResult VkFFT_DispatchPlan(VkFFTApplication* app, VkFFTAxis* a
 				}
 				bool indirect_dispatch = (app->configuration.indirectDispatch && app->configuration.indirectHostPointer != nullptr);
 				pfUINT indirect_offset;
-				//auto sc = axis->specializationConstants.inverse;
 				if (indirect_dispatch){
 					unsigned int* host_indirect = (unsigned int*)((char*)app->configuration.indirectHostPointer + app->configuration.indirectBufferOffset + app->indirectDispatchID*16);
 					host_indirect[0] = (uint32_t)dispatchSize[0];
