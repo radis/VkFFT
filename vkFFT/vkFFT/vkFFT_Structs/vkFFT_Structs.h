@@ -330,6 +330,7 @@ typedef struct {
 #endif
 	pfUINT dynamicBatch; //set to 1 to dynamically limit the number of batches using the currentBatchUBO buffer. set to 2 for different numbers for fwd and inv.
     pfUINT indirectDispatch; //0 for direct, 1 for fwd indirect, 2 for inv indirec, 3 for both
+	const char* debugName;
 } VkFFTConfiguration;//parameters specified at plan creation
 
 typedef struct {
@@ -1200,6 +1201,8 @@ typedef struct {
 
 	pfUINT applicationStringSize;//size of saveApplicationString in bytes
 	void* saveApplicationString;//memory array(uint32_t* for Vulkan, char* for CUDA/HIP/OpenCL) through which user can access VkFFT generated binaries. (will be allocated by VkFFT, deallocated with deleteVkFFT call)
+	pfUINT debugKernelCounter;
+	pfUINT debugUpdateCounter;
 } VkFFTApplication;
 
 #endif
