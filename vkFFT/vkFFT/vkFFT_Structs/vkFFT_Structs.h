@@ -331,6 +331,7 @@ typedef struct {
 	pfUINT dynamicBatch; //set to 1 to dynamically limit the number of batches using the currentBatchUBO buffer. set to 2 for different numbers for fwd and inv.
     pfUINT indirectDispatch; //0 for direct, 1 for fwd indirect, 2 for inv indirec, 3 for both
 	const char* debugName;
+	pfUINT enableDebug;
 } VkFFTConfiguration;//parameters specified at plan creation
 
 typedef struct {

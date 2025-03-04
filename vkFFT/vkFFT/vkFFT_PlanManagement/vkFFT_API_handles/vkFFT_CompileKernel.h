@@ -178,46 +178,22 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 				GLSLANG_MSG_DEFAULT_BIT,
 				(const glslang_resource_t*)&default_resource,
 			};
-			
-			
-		//DvdB
-		
-		const char* dname = app->configuration.debugName;
-        ofstream myfile;
-        std::string fname = "";
-		
-		fname += dname ;
-		fname += "_kernel_";
-		fname += std::to_string(app->debugKernelCounter) +".comp";
-        
-		
-		
-		
-		// if (fname=="FFT1_kernel_3.txt"){
-			// ifstream file("FFT1_kernel_3b.txt", ios::in | ios::binary | ios::ate);
-        
-		    // unsigned int fileSize = file.tellg();
-			// file.seekg(0, ios::beg);
-
-			// char* buffer = new char[fileSize + 1];
-			// file.read(buffer, fileSize);
-			// buffer[fileSize] = '\0';
-
-			// file.close();
 						
-			// code0 = buffer;
-		
-		// }
-		
-		myfile.open(fname);
-		//app->configuration.dirkName = "DIRKDIRK";
-        //myfile << app->configuration.dirkName;
-		//myfile << "// kernel type: " << app->configuration.dirkTypeFFT <<endl;
-        myfile << code0;
-		
-		myfile.close();
-		app->debugKernelCounter++;
-		
+		if (app->configuration.enableDebug){
+			const char* dname = app->configuration.debugName;
+			ofstream myfile;
+			std::string fname = "";
+			
+			fname += dname ;
+			fname += "_kernel_";
+			fname += std::to_string(app->debugKernelCounter) +".comp";
+			
+			myfile.open(fname);
+			myfile << code0;
+			
+			myfile.close();
+			app->debugKernelCounter++;
+			}
 		
 		
 		//printf("%s\n", code0);
