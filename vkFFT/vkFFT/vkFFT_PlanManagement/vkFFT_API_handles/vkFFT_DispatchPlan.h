@@ -175,7 +175,10 @@ static inline VkFFTResult VkFFT_DispatchPlan(VkFFTApplication* app, VkFFTAxis* a
 					host_indirect[0] = (uint32_t)dispatchSize[0];
 					host_indirect[1] = (uint32_t)dispatchSize[1];
 					host_indirect[2] = (uint32_t)dispatchSize[2];
-					host_indirect[3] = axis->specializationConstants.inverse + axis->specializationConstants.performR2CmultiUpload * 2;// + axis->specializationConstants.axis_upload_id * 10 + axis->specializationConstants.axis_id;
+                    host_indirect[3] = axis->batchWorkGroup;
+;
+					//host_indirect[3] = 	1000*axis->specializationConstants.performR2C + axis->specializationConstants.performR2CmultiUpload;
+                    //host_indirect[3] = axis->specializationConstants.inverse + axis->specializationConstants.performR2CmultiUpload * 2;// + axis->specializationConstants.axis_upload_id * 10 + axis->specializationConstants.axis_id;
 					indirect_offset = app->configuration.indirectBufferOffset + 16*app->indirectDispatchID;
 					vkCmdDispatchIndirect(app->configuration.commandBuffer[0], app->configuration.indirectBuffer, indirect_offset);
 					app->indirectDispatchID++;

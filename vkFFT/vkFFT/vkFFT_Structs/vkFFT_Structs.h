@@ -1127,6 +1127,7 @@ typedef struct {
 	pfUINT bufferLUTSize;
 	pfUINT bufferRaderUintLUTSize;
 	pfUINT referenceLUT;
+    pfUINT batchWorkGroup;
 } VkFFTAxis;
 
 typedef struct {

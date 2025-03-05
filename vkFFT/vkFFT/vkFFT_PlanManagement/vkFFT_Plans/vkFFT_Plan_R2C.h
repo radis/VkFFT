@@ -42,6 +42,7 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 #elif(VKFFT_BACKEND==5)
 #endif
 	VkFFTAxis* axis = &FFTPlan->R2Cdecomposition;
+    axis->batchWorkGroup = 2;
 	axis->specializationConstants.sourceFFTSize.type = 31;
 	axis->specializationConstants.sourceFFTSize.data.i = (pfINT)app->configuration.size[0];
     axis->specializationConstants.numFFTdims = (int)app->configuration.FFTdim;
