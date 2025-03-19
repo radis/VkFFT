@@ -276,9 +276,6 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 			else
 				axis->specializationConstants.zeropad[1] = 0;
 		}*/
-		if (app->configuration.dynamicBatch){
-			axis->specializationConstants.dynamicBatch = app->configuration.dynamicBatch;
-		}
 		if ((app->configuration.FFTdim == 1) && (app->configuration.performConvolution)) {
 			axis->specializationConstants.convolutionStep = 1;
 		}
