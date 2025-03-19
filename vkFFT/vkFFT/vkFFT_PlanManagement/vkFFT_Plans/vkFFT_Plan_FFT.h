@@ -46,7 +46,7 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 #elif(VKFFT_BACKEND==5)
 #endif
 	VkFFTAxis* axis = (reverseBluesteinMultiUpload) ? &FFTPlan->inverseBluesteinAxes[axis_id][axis_upload_id] : &FFTPlan->axes[axis_id][axis_upload_id];
-
+    axis->batchWorkGroup = 1;
 	axis->specializationConstants.sourceFFTSize.type = 31;
 	axis->specializationConstants.sourceFFTSize.data.i = app->configuration.size[axis_id];
 	axis->specializationConstants.axis_id = (int)axis_id;
@@ -781,7 +781,6 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 			deleteVkFFT(app);
 			return resFFT;
 		}
-		app->configuration.dirkTypeFFT = 100000 + 1000*axis_id + 100*axis_upload_id+10*inverse+reverseBluesteinMultiUpload;
 		resFFT = VkFFT_CompileKernel(app, axis);
 		if (resFFT != VKFFT_SUCCESS) {
 			deleteVkFFT(app);
