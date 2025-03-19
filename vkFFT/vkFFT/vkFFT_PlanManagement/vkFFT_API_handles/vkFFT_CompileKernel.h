@@ -178,24 +178,7 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 				GLSLANG_MSG_DEFAULT_BIT,
 				(const glslang_resource_t*)&default_resource,
 			};
-						
-		if (app->configuration.enableDebug){
-			const char* dname = app->configuration.debugName;
-			ofstream myfile;
-			std::string fname = "";
-			
-			fname += dname ;
-			fname += "_kernel_";
-			fname += std::to_string(app->debugKernelCounter) +".comp";
-			
-			myfile.open(fname);
-			myfile << code0;
-			
-			myfile.close();
-			app->debugKernelCounter++;
-			}
-		
-		
+
 		//printf("%s\n", code0);
 		glslang_shader_t* shader = glslang_shader_create((const glslang_input_t*)&input);
 		const char* err;

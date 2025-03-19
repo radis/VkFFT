@@ -345,8 +345,6 @@ typedef struct {
 	MTL::ComputeCommandEncoder* commandEncoder;//Filled at app execution
 #endif
 	pfUINT indirectDispatch; //0 for direct, 1 for indirect dispatch
-	const char* debugName;
-	pfUINT enableDebug;
 } VkFFTConfiguration;//parameters specified at plan creation
 
 typedef struct {
@@ -1253,8 +1251,6 @@ typedef struct {
 
 	pfUINT applicationStringSize;//size of saveApplicationString in bytes
 	void* saveApplicationString;//memory array(uint32_t* for Vulkan, char* for CUDA/HIP/OpenCL) through which user can access VkFFT generated binaries. (will be allocated by VkFFT, deallocated with deleteVkFFT call)
-	pfUINT debugKernelCounter;
-	pfUINT debugUpdateCounter;
 } VkFFTApplication;
 
 #endif

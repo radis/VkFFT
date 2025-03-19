@@ -741,16 +741,6 @@ static inline void VkFFTSetBufferParameters(void*const** axisBuffer, pfUINT* axi
 }
 static inline VkFFTResult VkFFTUpdateBufferSet(VkFFTApplication* app, VkFFTPlan* FFTPlan, VkFFTAxis* axis, pfUINT axis_id, pfUINT axis_upload_id, pfUINT inverse) {
 	
-	ofstream myfile;
-	if (app->configuration.enableDebug){
-        const char* dname = app->configuration.debugName;
-        std::string fname = "";
-        fname += dname ;
-        fname += "_buffer_";
-        fname += std::to_string(app->debugUpdateCounter) + ".txt";
-        myfile.open(fname);
-        myfile << "FFT" <<endl;
-	}
 	if (axis->specializationConstants.performOffsetUpdate || axis->specializationConstants.performBufferSetUpdate) {
 		axis->specializationConstants.inputOffset.type = 31;
 		axis->specializationConstants.outputOffset.type = 31;
@@ -1012,23 +1002,10 @@ static inline VkFFTResult VkFFTUpdateBufferSet(VkFFTApplication* app, VkFFTPlan*
 	if (axis->specializationConstants.performOffsetUpdate) {
 		axis->specializationConstants.performOffsetUpdate = 0;
 	}
-    if (app->configuration.enableDebug){
-        myfile.close();}
-	app->debugUpdateCounter++;
 	return VKFFT_SUCCESS;
 }
 static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTApplication* app, VkFFTPlan* FFTPlan, VkFFTAxis* axis, pfUINT axis_id, pfUINT axis_upload_id, pfUINT inverse) {
 	
-    ofstream myfile;
-	if (app->configuration.enableDebug){
-        const char* dname = app->configuration.debugName;
-        std::string fname = "";
-        fname += dname ;
-        fname += "_buffer_";
-        fname += std::to_string(app->debugUpdateCounter) + ".txt";
-        myfile.open(fname);
-        myfile << "R2C" <<endl;
-    }
 	
 	if (axis->specializationConstants.performOffsetUpdate || axis->specializationConstants.performBufferSetUpdate) {
 #if(VKFFT_BACKEND==0)
@@ -1218,10 +1195,6 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 	if (axis->specializationConstants.performOffsetUpdate) {
 		axis->specializationConstants.performOffsetUpdate = 0;
 	}
-	if (app->configuration.enableDebug){
-        myfile.close();
-    }
-	app->debugUpdateCounter++;
 	return VKFFT_SUCCESS;
 }
 
