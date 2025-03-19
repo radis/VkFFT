@@ -13,7 +13,7 @@
 
 #if(VKFFT_BACKEND==0)
 #include "vulkan/vulkan.h"
-#include "glslang_c_interface.h"
+#include "glslang/Include/glslang_c_interface.h"
 #elif(VKFFT_BACKEND==1)
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -65,6 +65,7 @@ VkFFTResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output, 
 	if (file_output)
 		fprintf(output, "0 - VkFFT FFT + iFFT C2C benchmark 1D batched in single precision\n");
 	printf("0 - VkFFT FFT + iFFT C2C benchmark 1D batched in single precision\n");
+	int useSeparateComplexComponents = 0;
 	const int num_runs = 3;
 	double benchmark_result = 0;//averaged result = sum(system_size/iteration_time)/num_benchmark_samples
 	//memory allocated on the CPU once, makes benchmark completion faster + avoids performance issues connected to frequent allocation/deallocation.
@@ -86,15 +87,19 @@ VkFFTResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output, 
 			if (n == 0) configuration.size[0] = 4096;
             configuration.numberBatches = (uint64_t)((64 * 32 * (uint64_t)pow(2, 16)) / configuration.size[0]);
 			if (configuration.numberBatches < 1) configuration.numberBatches = 1;
+			if (useSeparateComplexComponents) {
+				configuration.bufferSeparateComplexComponents = 1;
+				configuration.bufferNum = 2;
+			}
 #if(VKFFT_BACKEND!=5)
-			if (r==0) configuration.saveApplicationToString = 1;
-			if (r!=0) configuration.loadApplicationFromString = 1;
+			if (r == 0) configuration.saveApplicationToString = 1;
+			if (r != 0) configuration.loadApplicationFromString = 1;
 #endif
 			//After this, configuration file contains pointers to Vulkan objects needed to work with the GPU: VkDevice* device - created device, [uint64_t *bufferSize, VkBuffer *buffer, VkDeviceMemory* bufferDeviceMemory] - allocated GPU memory FFT is performed on. [uint64_t *kernelSize, VkBuffer *kernel, VkDeviceMemory* kernelDeviceMemory] - allocated GPU memory, where kernel for convolution is stored.
 #if(VKFFT_BACKEND==5)
-            configuration.device = vkGPU->device;
+			configuration.device = vkGPU->device;
 #else
-            configuration.device = &vkGPU->device;
+			configuration.device = &vkGPU->device;
 #endif
 #if(VKFFT_BACKEND==0)
 			configuration.queue = &vkGPU->queue; //to allocate memory for LUT, we have to pass a queue, vkGPU->fence, commandPool and physicalDevice pointers 
@@ -109,63 +114,69 @@ VkFFTResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output, 
 			configuration.commandQueue = &vkGPU->commandQueue;
 			configuration.commandQueueID = vkGPU->commandQueueID;
 #elif(VKFFT_BACKEND==5)
-            configuration.queue = vkGPU->queue;
+			configuration.queue = vkGPU->queue;
 #endif
-			//Allocate buffer for the input data.
-			uint64_t bufferSize = (uint64_t)sizeof(float) * 2 * configuration.size[0] * configuration.numberBatches;
+			//Allocate buffer for the input data. Second buffer will only be filled if useSeparateComplexComponents is used for specifying separate buffer for real and imaginary components execution mode.
+			
+			uint64_t bufferSize[2];
+			
+			if (useSeparateComplexComponents) {
+				bufferSize[0] = (uint64_t)sizeof(float) * configuration.size[0] * configuration.numberBatches;
+				bufferSize[1] = (uint64_t)sizeof(float) * configuration.size[0] * configuration.numberBatches;
+			}
+			else {
+				bufferSize[0] = (uint64_t)sizeof(float) * 2 * configuration.size[0] * configuration.numberBatches;
+				bufferSize[1] = 0;
+			}
+
+			uint64_t totalBufferSize = bufferSize[0] + bufferSize[1];
+
 #if(VKFFT_BACKEND==0)
-			VkBuffer buffer = {};
-			VkDeviceMemory bufferDeviceMemory = {};
-			resFFT = allocateBuffer(vkGPU, &buffer, &bufferDeviceMemory, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, bufferSize);
-			if (resFFT != VKFFT_SUCCESS) return resFFT;
-			configuration.buffer = &buffer;
+			VkBuffer buffer[2] = {};
+			VkDeviceMemory bufferDeviceMemory[2] = {};
 #elif(VKFFT_BACKEND==1)
-			cuFloatComplex* buffer = 0;
-			res = cudaMalloc((void**)&buffer, bufferSize);
-			if (res != cudaSuccess) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
-			configuration.buffer = (void**)&buffer;
+			void* buffer[2] = {};
 #elif(VKFFT_BACKEND==2)
-			hipFloatComplex* buffer = 0;
-			res = hipMalloc((void**)&buffer, bufferSize);
-			if (res != hipSuccess) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
-			configuration.buffer = (void**)&buffer;
+			void* buffer[2] = {};
 #elif(VKFFT_BACKEND==3)
-			cl_mem buffer = 0;
-			buffer = clCreateBuffer(vkGPU->context, CL_MEM_READ_WRITE, bufferSize, 0, &res);
-			if (res != CL_SUCCESS) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
-			configuration.buffer = &buffer;
+			cl_mem buffer[2] = {};
 #elif(VKFFT_BACKEND==4)
-			void* buffer = 0;
-			ze_device_mem_alloc_desc_t device_desc = {};
-			device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
-			res = zeMemAllocDevice(vkGPU->context, &device_desc, bufferSize, sizeof(float), vkGPU->device, &buffer);
-			if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
-			configuration.buffer = &buffer;
+			void* buffer[2] = {};
 #elif(VKFFT_BACKEND==5)
-            MTL::Buffer* buffer = 0;
-            buffer = vkGPU->device->newBuffer(bufferSize, MTL::ResourceStorageModePrivate);
-            configuration.buffer = &buffer;
+			MTL::Buffer* buffer[2] = {};
 #endif
-
-			configuration.bufferSize = &bufferSize;
-
-			//Fill data on CPU. It is best to perform all operations on GPU after initial upload.
-			/*float* buffer_input = (float*)malloc(bufferSize);
-
-			for (uint64_t k = 0; k < configuration.size[2]; k++) {
-				for (uint64_t j = 0; j < configuration.size[1]; j++) {
-					for (uint64_t i = 0; i < configuration.size[0]; i++) {
-						buffer_input[2 * (i + j * configuration.size[0] + k * (configuration.size[0]) * configuration.size[1])] = 2 * ((float)rand()) / RAND_MAX - 1.0;
-						buffer_input[2 * (i + j * configuration.size[0] + k * (configuration.size[0]) * configuration.size[1]) + 1] = 2 * ((float)rand()) / RAND_MAX - 1.0;
-						}
-					}
-				}
-
-			*/
+			if (useSeparateComplexComponents) {
+#if(VKFFT_BACKEND==0)
+				allocateMemoryGPU(vkGPU, (void**)&buffer[0], (void**)&bufferDeviceMemory[0], bufferSize[0]);
+				allocateMemoryGPU(vkGPU, (void**)&buffer[1], (void**)&bufferDeviceMemory[1], bufferSize[1]);
+#else
+				allocateMemoryGPU(vkGPU, (void**)&buffer[0], 0, bufferSize[0]);
+				allocateMemoryGPU(vkGPU, (void**)&buffer[1], 0, bufferSize[1]);
+#endif
+			}
+			else {
+#if(VKFFT_BACKEND==0)
+				allocateMemoryGPU(vkGPU, (void**)&buffer[0], (void**)&bufferDeviceMemory[0], bufferSize[0]);
+#else
+				allocateMemoryGPU(vkGPU, (void**)&buffer[0], 0, bufferSize[0]);
+#endif
+			}
+			configuration.buffer = buffer;
+			configuration.bufferSize = bufferSize;
+			//Fill data on CPU. It is best to perform all operations on GPU after initial upload. For benchmark we use random data.
+			
 			//Sample buffer transfer tool. Uses staging buffer (if needed) of the same size as destination buffer, which can be reduced if transfer is done sequentially in small buffers.
-            resFFT = transferDataFromCPU(vkGPU, buffer_input, &buffer, bufferSize);
-            if (resFFT != VKFFT_SUCCESS) return resFFT;
-
+			if (useSeparateComplexComponents) {
+				resFFT = transferDataFromCPU(vkGPU, buffer_input, &buffer[0], bufferSize[0]);
+				if (resFFT != VKFFT_SUCCESS) return resFFT;
+				resFFT = transferDataFromCPU(vkGPU, buffer_input, &buffer[1], bufferSize[1]);
+				if (resFFT != VKFFT_SUCCESS) return resFFT;
+			}
+			else {
+				resFFT = transferDataFromCPU(vkGPU, buffer_input, &buffer[0], bufferSize[0]);
+				if (resFFT != VKFFT_SUCCESS) return resFFT;
+			}
+			//Use cached binary, if available.
 			if (configuration.loadApplicationFromString) {
 				FILE* kernelCache;
 				uint64_t str_len;
@@ -199,7 +210,7 @@ VkFFTResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output, 
 			}
 
 			//Submit FFT+iFFT.
-			uint64_t num_iter = (((uint64_t)3 * 4096 * 1024.0 * 1024.0) / bufferSize > 1000) ? 1000 : (uint64_t)(((uint64_t)3 * 4096 * 1024.0 * 1024.0) / bufferSize);
+			uint64_t num_iter = (((uint64_t)3 * 4096 * 1024.0 * 1024.0) / totalBufferSize > 1000) ? 1000 : (uint64_t)(((uint64_t)3 * 4096 * 1024.0 * 1024.0) / totalBufferSize);
 #if(VKFFT_BACKEND==0)
 			if (vkGPU->physicalDeviceProperties.vendorID == 0x8086) num_iter /= 4;//smaller benchmark for Intel GPUs
 #elif(VKFFT_BACKEND==3)
@@ -236,30 +247,45 @@ VkFFTResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output, 
 						num_tot_transfers += app.localFFTPlan->numAxisUploads[i];
 					num_tot_transfers *= 4;
 					if (file_output)
-						fprintf(output, "VkFFT System: %" PRIu64 " %" PRIu64 "x%" PRIu64 " Buffer: %" PRIu64 " MB avg_time_per_step: %0.3f ms std_error: %0.3f num_iter: %" PRIu64 " benchmark: %" PRIu64 " bandwidth: %0.1f\n", (uint64_t)log2(configuration.size[0]), configuration.size[0], configuration.numberBatches, bufferSize / 1024 / 1024, avg_time, std_error, num_iter, (uint64_t)(((double)bufferSize / 1024) / avg_time), bufferSize / 1024.0 / 1024.0 / 1.024 * num_tot_transfers / avg_time);
+						fprintf(output, "VkFFT System: %" PRIu64 " %" PRIu64 "x%" PRIu64 " Buffer: %" PRIu64 " MB avg_time_per_step: %0.3f ms std_error: %0.3f num_iter: %" PRIu64 " benchmark: %" PRIu64 " bandwidth: %0.1f\n", (uint64_t)log2(configuration.size[0]), configuration.size[0], configuration.numberBatches, totalBufferSize / 1024 / 1024, avg_time, std_error, num_iter, (uint64_t)(((double)totalBufferSize / 1024) / avg_time), totalBufferSize / 1024.0 / 1024.0 / 1.024 * num_tot_transfers / avg_time);
 
-					printf("VkFFT System: %" PRIu64 " %" PRIu64 "x%" PRIu64 " Buffer: %" PRIu64 " MB avg_time_per_step: %0.3f ms std_error: %0.3f num_iter: %" PRIu64 " benchmark: %" PRIu64 " bandwidth: %0.1f\n", (uint64_t)log2(configuration.size[0]), configuration.size[0], configuration.numberBatches, bufferSize / 1024 / 1024, avg_time, std_error, num_iter, (uint64_t)(((double)bufferSize / 1024) / avg_time), bufferSize / 1024.0 / 1024.0 / 1.024 * num_tot_transfers / avg_time);
-					benchmark_result += ((double)bufferSize / 1024) / avg_time;
+					printf("VkFFT System: %" PRIu64 " %" PRIu64 "x%" PRIu64 " Buffer: %" PRIu64 " MB avg_time_per_step: %0.3f ms std_error: %0.3f num_iter: %" PRIu64 " benchmark: %" PRIu64 " bandwidth: %0.1f\n", (uint64_t)log2(configuration.size[0]), configuration.size[0], configuration.numberBatches, totalBufferSize / 1024 / 1024, avg_time, std_error, num_iter, (uint64_t)(((double)totalBufferSize / 1024) / avg_time), totalBufferSize / 1024.0 / 1024.0 / 1.024 * num_tot_transfers / avg_time);
+					benchmark_result += ((double)totalBufferSize / 1024) / avg_time;
 				}
 
 
 			}
 
 #if(VKFFT_BACKEND==0)
-			vkDestroyBuffer(vkGPU->device, buffer, NULL);
-			vkFreeMemory(vkGPU->device, bufferDeviceMemory, NULL);
+			vkDestroyBuffer(vkGPU->device, buffer[0], NULL);
+			vkFreeMemory(vkGPU->device, bufferDeviceMemory[0], NULL);
 #elif(VKFFT_BACKEND==1)
-			cudaFree(buffer);
+			cudaFree(buffer[0]);
 #elif(VKFFT_BACKEND==2)
-			hipFree(buffer);
+			hipFree(buffer[0]);
 #elif(VKFFT_BACKEND==3)
-			clReleaseMemObject(buffer);
+			clReleaseMemObject(buffer[0]);
 #elif(VKFFT_BACKEND==4)
-			zeMemFree(vkGPU->context, buffer);
+			zeMemFree(vkGPU->context, buffer[0]);
 #elif(VKFFT_BACKEND==5)
-            buffer->release();
+            buffer[0]->release();
 #endif
-
+			if (useSeparateComplexComponents) {
+#if(VKFFT_BACKEND==0)
+				vkDestroyBuffer(vkGPU->device, buffer[1], NULL);
+				vkFreeMemory(vkGPU->device, bufferDeviceMemory[1], NULL);
+#elif(VKFFT_BACKEND==1)
+				cudaFree(buffer[1]);
+#elif(VKFFT_BACKEND==2)
+				hipFree(buffer[1]);
+#elif(VKFFT_BACKEND==3)
+				clReleaseMemObject(buffer[1]);
+#elif(VKFFT_BACKEND==4)
+				zeMemFree(vkGPU->context, buffer[1]);
+#elif(VKFFT_BACKEND==5)
+				buffer[1]->release();
+#endif
+			}
 			deleteVkFFT(&app);
 
 		}

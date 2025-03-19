@@ -183,8 +183,6 @@ static inline void PfDeallocateContainer(VkFFTSpecializationConstantsLayout* sc,
 				free(container->name);
 			container->name = 0;
 		}
-		container->size = 0;
-		container->type = 0;
 		if(container->type < 200){
 			if ((((container->type % 100) / 10) == 3) && ((container->type % 10) == 2)) {
 				PfDeallocateContainer(sc, &container->data.dd[0]);
@@ -201,6 +199,8 @@ static inline void PfDeallocateContainer(VkFFTSpecializationConstantsLayout* sc,
 				container->data.c = 0;
 			}
 		}
+		container->size = 0;
+		container->type = 0;
 	}
 	return;
 }
@@ -293,6 +293,49 @@ static inline void PfGetTypeFromCode(VkFFTSpecializationConstantsLayout* sc, int
 	}
 	sc->res = VKFFT_ERROR_MATH_FAILED;
 	return;
+}
+static inline int PfSizeTypeFromCode(VkFFTSpecializationConstantsLayout* sc, int code) {
+	if (sc->res != VKFFT_SUCCESS) return 0;
+	switch (code % 10) {
+	case 1:
+		switch ((code % 100) / 10) {
+		case 0:
+			return 4;
+		case 1:
+			return 4;
+		case 2:
+			return 8;
+		case 3:
+			return 8;
+		}
+		break;
+	case 2:
+		switch ((code % 100) / 10) {
+		case 0:
+			return 2;
+		case 1:
+			return 4;
+		case 2:
+			return 8;
+		case 3:
+			return 16;
+		}
+		break;
+	case 3:
+		switch ((code % 100) / 10) {
+		case 0:
+			return 4;
+		case 1:
+			return 8;
+		case 2:
+			return 16;
+		case 3:
+			return 32;
+		}
+		break;
+	}
+	sc->res = VKFFT_ERROR_MATH_FAILED;
+	return 0;
 }
 static inline void PfAppendNumberLiteral(VkFFTSpecializationConstantsLayout* sc, PfContainer* number) {
 	if (sc->res != VKFFT_SUCCESS) return;
@@ -2297,7 +2340,7 @@ static inline void PfMul(VkFFTSpecializationConstantsLayout* sc, PfContainer* ou
 #endif
 		if ((in_2->type % 10) == 3){
 			if ((in_1->type % 10) == 3){
-				if ((in_1->type < 100) || (in_2->type < 100) || ((strcmp(out->name, in_1->name)) && (strcmp(out->name, in_2->name)))) {
+				if (((in_1->type < 100) || (strcmp(out->name, in_1->name))) && ((in_2->type < 100) || strcmp(out->name, in_2->name))) {
 					PfMul(sc, &out->data.c[0], &in_1->data.c[1], &in_2->data.c[1], 0);
 					PfMovNeg(sc, &out->data.c[0], &out->data.c[0]);
 					PfFMA(sc, &out->data.c[0], &in_1->data.c[0], &in_2->data.c[0], &out->data.c[0]);
@@ -3121,7 +3164,7 @@ static inline void PfAnd(VkFFTSpecializationConstantsLayout* sc, PfContainer* ou
 					else {
 						switch (in_2->type % 10) {
 						case 1:
-							out->data.i = in_1->data.i && in_2->data.i;
+							out->data.i = in_1->data.i & in_2->data.i;
 							return;
 						}
 					}
@@ -3236,7 +3279,7 @@ static inline void PfOr(VkFFTSpecializationConstantsLayout* sc, PfContainer* out
 					else {
 						switch (in_2->type % 10) {
 						case 1:
-							out->data.i = in_1->data.i || in_2->data.i;
+							out->data.i = in_1->data.i | in_2->data.i;
 							return;
 						}
 					}
@@ -3304,8 +3347,14 @@ sincos(%s, &%s.y, &%s.x);\n", in_1->name, out->name, out->name);
 						PfAppendLine(sc);
 #elif ((VKFFT_BACKEND == 3) || (VKFFT_BACKEND == 4) || (VKFFT_BACKEND == 5))
 						sc->tempLen = sprintf(sc->tempStr, "\
-%s.y = sincos(%s, &%s.x);\n", out->name, in_1->name, out->name);
+%s.x = cos(%s);\n", out->name, in_1->name);
 						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, "\
+%s.y = sin(%s);\n", out->name, in_1->name);
+						PfAppendLine(sc);
+						/*sc->tempLen = sprintf(sc->tempStr, "\
+%s.y = sincos(%s, &%s.x);\n", out->name, in_1->name, out->name);
+						PfAppendLine(sc);*/
 #endif
 						return;
 					}
@@ -4020,7 +4069,7 @@ static inline void PfPrintReg(VkFFTSpecializationConstantsLayout* sc, PfContaine
 
 static inline void PfPermute(VkFFTSpecializationConstantsLayout* sc, pfUINT* permute, pfUINT num_elem, pfUINT type, PfContainer* regIDs, PfContainer* temp) {
 	if (sc->res != VKFFT_SUCCESS) return;
-	PfContainer tempID[33] = VKFFT_ZERO_INIT;
+	PfContainer tempID[68] = VKFFT_ZERO_INIT;
 	for (int i = 0; i < num_elem; i++) {
 		tempID[i].type = 100 + sc->vecTypeCode;
 		PfAllocateContainerFlexible(sc, &tempID[i], 50);

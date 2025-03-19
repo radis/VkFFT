@@ -9,7 +9,7 @@
 #include <inttypes.h>
 #if(VKFFT_BACKEND==0)
 #include "vulkan/vulkan.h"
-#include "glslang_c_interface.h"
+#include "glslang/Include/glslang_c_interface.h"
 #elif(VKFFT_BACKEND==1)
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -82,6 +82,7 @@
 #include "sample_50_convolution_VkFFT_single_1d_matrix.h"
 #include "sample_51_convolution_VkFFT_single_3d_matrix_zeropadding_r2c.h"
 #include "sample_52_convolution_VkFFT_single_2d_batched_r2c.h"
+#include "sample_53_convolution_VkFFT_single_2d_Nimages_1kernel.h"
 
 #include "sample_100_benchmark_VkFFT_single_nd_dct.h"
 #include "sample_101_benchmark_VkFFT_double_nd_dct.h"
@@ -176,8 +177,6 @@ VkFFTResult launchVkFFT(VkGPU* vkGPU, uint64_t sample_id, bool file_output, FILE
 	if (res2 != cudaSuccess) return VKFFT_ERROR_FAILED_TO_SET_DEVICE_ID;
 	res = cuDeviceGet(&vkGPU->device, (int)vkGPU->device_id);
 	if (res != CUDA_SUCCESS) return VKFFT_ERROR_FAILED_TO_GET_DEVICE;
-	res = cuCtxCreate(&vkGPU->context, 0, (int)vkGPU->device);
-	if (res != CUDA_SUCCESS) return VKFFT_ERROR_FAILED_TO_CREATE_CONTEXT;
 #elif(VKFFT_BACKEND==2)
 	hipError_t res = hipSuccess;
 	res = hipInit(0);
@@ -186,8 +185,6 @@ VkFFTResult launchVkFFT(VkGPU* vkGPU, uint64_t sample_id, bool file_output, FILE
 	if (res != hipSuccess) return VKFFT_ERROR_FAILED_TO_SET_DEVICE_ID;
 	res = hipDeviceGet(&vkGPU->device, (int)vkGPU->device_id);
 	if (res != hipSuccess) return VKFFT_ERROR_FAILED_TO_GET_DEVICE;
-	res = hipCtxCreate(&vkGPU->context, 0, (int)vkGPU->device);
-	if (res != hipSuccess) return VKFFT_ERROR_FAILED_TO_CREATE_CONTEXT;
 #elif(VKFFT_BACKEND==3)
 	cl_int res = CL_SUCCESS;
 	cl_uint numPlatforms;
@@ -424,6 +421,11 @@ VkFFTResult launchVkFFT(VkGPU* vkGPU, uint64_t sample_id, bool file_output, FILE
         resFFT = sample_52_convolution_VkFFT_single_2d_batched_r2c(vkGPU, file_output, output, isCompilerInitialized);
         break;
     }
+	case 53:
+    {
+        resFFT = sample_53_convolution_VkFFT_single_2d_Nimages_1kernel(vkGPU, file_output, output, isCompilerInitialized);
+        break;
+    }
     case 110:
     {
         resFFT = sample_100_benchmark_VkFFT_single_nd_dct(vkGPU, file_output, output, isCompilerInitialized, 1);
@@ -512,9 +514,7 @@ VkFFTResult launchVkFFT(VkGPU* vkGPU, uint64_t sample_id, bool file_output, FILE
 	vkDestroyInstance(vkGPU->instance, NULL);
 	glslang_finalize_process();//destroy compiler after use
 #elif(VKFFT_BACKEND==1)
-	res = cuCtxDestroy(vkGPU->context);
 #elif(VKFFT_BACKEND==2)
-	res = hipCtxDestroy(vkGPU->context);
 #elif(VKFFT_BACKEND==3)
 	res = clReleaseCommandQueue(vkGPU->commandQueue);
 	if (res != CL_SUCCESS) return VKFFT_ERROR_FAILED_TO_RELEASE_COMMAND_QUEUE;
@@ -562,7 +562,7 @@ int main(int argc, char* argv[])
 		version_decomposed[0] = version / 10000;
 		version_decomposed[1] = (version - version_decomposed[0] * 10000) / 100;
 		version_decomposed[2] = (version - version_decomposed[0] * 10000 - version_decomposed[1] * 100);
-		printf("VkFFT v%d.%d.%d (05-02-2024). Author: Tolmachev Dmitrii\n", version_decomposed[0], version_decomposed[1], version_decomposed[2]);
+		printf("VkFFT v%d.%d.%d. Author: Tolmachev Dmitrii\n", version_decomposed[0], version_decomposed[1], version_decomposed[2]);
 #if (VKFFT_BACKEND==0)
 		printf("Vulkan backend\n");
 #elif (VKFFT_BACKEND==1)
@@ -638,6 +638,7 @@ int main(int argc, char* argv[])
 		printf("		50 - convolution example with identity kernel\n");
 		printf("		51 - zeropadding convolution example with identity kernel\n");
 		printf("		52 - batched convolution example with identity kernel\n");
+		printf("		53 - convolution example with one scaling kernel of three colors, multiple images of three colors\n");
 		printf("		110 - VkFFT FFT + iFFT R2R DCT-1 multidimensional benchmark in single precision\n");
 		printf("		111 - VkFFT FFT + iFFT R2R DCT-1 multidimensional benchmark in double precision\n");
 		printf("		120 - VkFFT FFT + iFFT R2R DCT-2 multidimensional benchmark in single precision\n");

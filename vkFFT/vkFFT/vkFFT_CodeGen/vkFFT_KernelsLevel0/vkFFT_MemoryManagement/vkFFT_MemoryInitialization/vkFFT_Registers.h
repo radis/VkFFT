@@ -209,7 +209,7 @@ static inline void appendRegisterInitialization(VkFFTSpecializationConstantsLayo
 	//
 	int useRadix8plus = 0;
 	for (int i = 0; i < sc->numStages; i++)
-		if ((sc->stageRadix[i] == 8) || (sc->stageRadix[i] == 16) || (sc->stageRadix[i] == 32) || (sc->useRaderFFT)) useRadix8plus = 1;
+		if (((sc->stageRadix[i]%8) == 0) || (sc->stageRadix[i] == 17) || (sc->stageRadix[i] == 41) || (sc->useRaderFFT)) useRadix8plus = 1;
 	if (useRadix8plus == 1) {
 		if (maxNonPow2Radix > 1) {
 			sc->iw.type = 100 + sc->vecTypeCode;
@@ -341,7 +341,7 @@ static inline void appendRegisterInitialization(VkFFTSpecializationConstantsLayo
 		PfDefine(sc, &sc->angle, name);
 		PfSetToZero(sc, &sc->angle);
 	}
-	if (((sc->stageStartSize.data.i > 1) && (!((sc->stageStartSize.data.i > 1) && (!sc->reorderFourStep) && (sc->inverse)))) || (((sc->stageStartSize.data.i > 1) && (!sc->reorderFourStep) && (sc->inverse))) || (sc->performDCT) || (sc->performDST)) {
+	if (((sc->axis_upload_id > 0) && (!((sc->axis_upload_id > 0) && (!sc->reorderFourStep) && (sc->inverse)))) || (((sc->axis_upload_id > 0) && (!sc->reorderFourStep) && (sc->inverse))) || (sc->performDCT) || (sc->performDST)) {
 		sc->mult.type = 100 + sc->vecTypeCode;
 		PfAllocateContainerFlexible(sc, &sc->mult, 50);
 		sprintf(name, "mult");
@@ -572,7 +572,7 @@ static inline void freeRegisterInitialization(VkFFTSpecializationConstantsLayout
 	//
 	int useRadix8plus = 0;
 	for (int i = 0; i < sc->numStages; i++)
-		if ((sc->stageRadix[i] == 8) || (sc->stageRadix[i] == 16) || (sc->stageRadix[i] == 32) || (sc->useRaderFFT)) useRadix8plus = 1;
+		if (((sc->stageRadix[i]%8) == 0) || (sc->stageRadix[i] == 17) || (sc->stageRadix[i] == 41) || (sc->useRaderFFT)) useRadix8plus = 1;
 	if (useRadix8plus == 1) {
 		if (maxNonPow2Radix > 1) {
 			PfDeallocateContainer(sc, &sc->iw);
@@ -592,7 +592,7 @@ static inline void freeRegisterInitialization(VkFFTSpecializationConstantsLayout
 	PfDeallocateContainer(sc, &sc->inoutID_x);
 	PfDeallocateContainer(sc, &sc->inoutID_y);
 
-	if ((sc->performZeropaddingFull[0]) || (sc->performZeropaddingFull[1]) || (sc->performZeropaddingFull[2])) {
+	if ((sc->fftDim.data.i < sc->fft_dim_full.data.i) || ((type % 10) == 1) || ((type%10) == 2) || (sc->performZeropaddingFull[0]) || (sc->performZeropaddingFull[1]) || (sc->performZeropaddingFull[2])) {
 		PfDeallocateContainer(sc, &sc->disableThreads);
 	}
 	//initialize subgroups ids
@@ -632,7 +632,7 @@ static inline void freeRegisterInitialization(VkFFTSpecializationConstantsLayout
 	else {
 		PfDeallocateContainer(sc, &sc->angle);
 	}
-	if (((sc->stageStartSize.data.i > 1) && (!((sc->stageStartSize.data.i > 1) && (!sc->reorderFourStep) && (sc->inverse)))) || (((sc->stageStartSize.data.i > 1) && (!sc->reorderFourStep) && (sc->inverse))) || (sc->performDCT) || (sc->performDST)) {
+	if (((sc->axis_upload_id > 0) && (!((sc->axis_upload_id > 0) && (!sc->reorderFourStep) && (sc->inverse)))) || (((sc->axis_upload_id > 0) && (!sc->reorderFourStep) && (sc->inverse))) || (sc->performDCT) || (sc->performDST)) {
 		PfDeallocateContainer(sc, &sc->mult);
 	}
 	return;

@@ -132,9 +132,9 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 			free(phaseVectors_fp128);
 			return VKFFT_ERROR_MALLOC_FAILED;
 		}
-		pfUINT phaseVectorsNonZeroSize = ((((app->configuration.performDCT == 4) || (app->configuration.performDST == 4)) && (app->configuration.size[axis_id] % 2 == 0)) || ((FFTPlan->bigSequenceEvenR2C) && (axis_id == 0))) ? app->configuration.size[axis_id] / 2 : app->configuration.size[axis_id];
-		if (app->configuration.performDCT == 1) phaseVectorsNonZeroSize = 2 * app->configuration.size[axis_id] - 2;
-		if (app->configuration.performDST == 1) phaseVectorsNonZeroSize = 2 * app->configuration.size[axis_id] + 2;
+		pfUINT phaseVectorsNonZeroSize = ((((FFTPlan->axes[axis_id][0].specializationConstants.performDCT == 4) || (FFTPlan->axes[axis_id][0].specializationConstants.performDST == 4)) && (app->configuration.size[axis_id] % 2 == 0)) || ((FFTPlan->bigSequenceEvenR2C) && (axis_id == 0))) ? app->configuration.size[axis_id] / 2 : app->configuration.size[axis_id];
+		if (FFTPlan->axes[axis_id][0].specializationConstants.performDCT == 1) phaseVectorsNonZeroSize = 2 * app->configuration.size[axis_id] - 2;
+		if (FFTPlan->axes[axis_id][0].specializationConstants.performDST == 1) phaseVectorsNonZeroSize = 2 * app->configuration.size[axis_id] + 2;
 		pfLD double_PI = pfFPinit("3.14159265358979323846264338327950288419716939937510");
 		for (pfUINT i = 0; i < FFTPlan->actualFFTSizePerAxis[axis_id][axis_id]; i++) {
 			pfUINT rm = (i * i) % (2 * phaseVectorsNonZeroSize);
@@ -244,26 +244,26 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 		kernelPreparationConfiguration.size[0] = FFTPlan->actualFFTSizePerAxis[axis_id][axis_id];
 		kernelPreparationConfiguration.size[1] = 1;
 		kernelPreparationConfiguration.size[2] = 1;
-		kernelPreparationConfiguration.doublePrecision = (app->configuration.doublePrecision || app->configuration.doublePrecisionFloatMemory);
-		kernelPreparationConfiguration.quadDoubleDoublePrecision = (app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory);
+		kernelPreparationConfiguration.coalescedMemory = app->configuration.coalescedMemory;
+		kernelPreparationConfiguration.doublePrecision = (app->configuration.doublePrecision | app->configuration.doublePrecisionFloatMemory);
+		kernelPreparationConfiguration.quadDoubleDoublePrecision = (app->configuration.quadDoubleDoublePrecision | app->configuration.quadDoubleDoublePrecisionDoubleMemory);
 		kernelPreparationConfiguration.useLUT = 1;
 		kernelPreparationConfiguration.useLUT_4step = 1;
 		kernelPreparationConfiguration.registerBoost = 1;
 		kernelPreparationConfiguration.disableReorderFourStep = 1;
-		kernelPreparationConfiguration.fixMinRaderPrimeFFT = 17;
-		kernelPreparationConfiguration.fixMinRaderPrimeMult = 17;
-		kernelPreparationConfiguration.fixMaxRaderPrimeFFT = 17;
-		kernelPreparationConfiguration.fixMaxRaderPrimeMult = 17;
+		kernelPreparationConfiguration.fixMinRaderPrimeFFT = app->configuration.fixMinRaderPrimeMult;
+		kernelPreparationConfiguration.fixMinRaderPrimeMult = app->configuration.fixMinRaderPrimeMult;
+		kernelPreparationConfiguration.fixMaxRaderPrimeFFT = app->configuration.fixMinRaderPrimeMult;
+		kernelPreparationConfiguration.fixMaxRaderPrimeMult = app->configuration.fixMinRaderPrimeMult;
 		kernelPreparationConfiguration.saveApplicationToString = app->configuration.saveApplicationToString;
 		kernelPreparationConfiguration.loadApplicationFromString = app->configuration.loadApplicationFromString;
 		kernelPreparationConfiguration.sharedMemorySize = app->configuration.sharedMemorySize;
 		if (kernelPreparationConfiguration.loadApplicationFromString) {
 			kernelPreparationConfiguration.loadApplicationString = (void*)((char*)app->configuration.loadApplicationString + app->currentApplicationStringPos);
 		}
-		kernelPreparationConfiguration.performBandwidthBoost = (app->configuration.performBandwidthBoost > 0) ? app->configuration.performBandwidthBoost : 1;
-		if (axis_id == 0) kernelPreparationConfiguration.performBandwidthBoost = 0;
+		kernelPreparationConfiguration.performBandwidthBoost = (app->configuration.performBandwidthBoost > 0) ? app->configuration.performBandwidthBoost : 2;
 		if (axis_id > 0) kernelPreparationConfiguration.considerAllAxesStrided = 1;
-		if (app->configuration.tempBuffer) {
+		if (app->configuration.userTempBuffer) {
 			kernelPreparationConfiguration.userTempBuffer = 1;
 			kernelPreparationConfiguration.tempBuffer = app->configuration.tempBuffer;
 			kernelPreparationConfiguration.tempBufferSize = app->configuration.tempBufferSize;
@@ -276,7 +276,7 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 		kernelPreparationConfiguration.commandPool = app->configuration.commandPool;
 		kernelPreparationConfiguration.physicalDevice = app->configuration.physicalDevice;
 		kernelPreparationConfiguration.isCompilerInitialized = 1;//compiler can be initialized before VkFFT plan creation. if not, VkFFT will create and destroy one after initialization
-		if (app->configuration.tempBuffer) {
+		if (app->configuration.userTempBuffer) {
 			kernelPreparationConfiguration.tempBufferDeviceMemory = app->configuration.tempBufferDeviceMemory;
 		}
 		if (app->configuration.stagingBuffer != 0)	kernelPreparationConfiguration.stagingBuffer = app->configuration.stagingBuffer;
@@ -305,9 +305,9 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 			deleteVkFFT(&kernelPreparationApplication);
 			return VKFFT_ERROR_MALLOC_FAILED;
 		}
-		pfUINT phaseVectorsNonZeroSize = ((((app->configuration.performDCT == 4) || (app->configuration.performDST == 4)) && (app->configuration.size[axis_id] % 2 == 0)) || ((FFTPlan->bigSequenceEvenR2C) && (axis_id == 0))) ? app->configuration.size[axis_id] / 2 : app->configuration.size[axis_id];
-		if (app->configuration.performDCT == 1) phaseVectorsNonZeroSize = 2 * app->configuration.size[axis_id] - 2;
-		if (app->configuration.performDST == 1) phaseVectorsNonZeroSize = 2 * app->configuration.size[axis_id] + 2;
+		pfUINT phaseVectorsNonZeroSize = ((((FFTPlan->axes[axis_id][0].specializationConstants.performDCT == 4) || (FFTPlan->axes[axis_id][0].specializationConstants.performDST == 4)) && (app->configuration.size[axis_id] % 2 == 0)) || ((FFTPlan->bigSequenceEvenR2C) && (axis_id == 0))) ? app->configuration.size[axis_id] / 2 : app->configuration.size[axis_id];
+		if (FFTPlan->axes[axis_id][0].specializationConstants.performDCT == 1) phaseVectorsNonZeroSize = 2 * app->configuration.size[axis_id] - 2;
+		if (FFTPlan->axes[axis_id][0].specializationConstants.performDST == 1) phaseVectorsNonZeroSize = 2 * app->configuration.size[axis_id] + 2;
 		if ((FFTPlan->numAxisUploads[axis_id] > 1) && (!app->configuration.makeForwardPlanOnly)) {
 			if (app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) {
 				PfContainer in = VKFFT_ZERO_INIT;
@@ -1110,13 +1110,13 @@ static inline VkFFTResult VkFFTGenerateRaderFFTKernel(VkFFTApplication* app, VkF
 				kernelPreparationConfiguration.size[0] = axis->specializationConstants.raderContainer[i].prime - 1;
 				kernelPreparationConfiguration.size[1] = 1;
 				kernelPreparationConfiguration.size[2] = 1;
-				kernelPreparationConfiguration.doublePrecision = (app->configuration.doublePrecision || app->configuration.doublePrecisionFloatMemory);
-				kernelPreparationConfiguration.quadDoubleDoublePrecision = (app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory);
+				kernelPreparationConfiguration.doublePrecision = (app->configuration.doublePrecision | app->configuration.doublePrecisionFloatMemory);
+				kernelPreparationConfiguration.quadDoubleDoublePrecision = (app->configuration.quadDoubleDoublePrecision | app->configuration.quadDoubleDoublePrecisionDoubleMemory);
 				kernelPreparationConfiguration.useLUT = 1;
-				kernelPreparationConfiguration.fixMinRaderPrimeFFT = 17;
-				kernelPreparationConfiguration.fixMinRaderPrimeMult = 17;
-				kernelPreparationConfiguration.fixMaxRaderPrimeFFT = 17;
-				kernelPreparationConfiguration.fixMaxRaderPrimeMult = 17;
+				kernelPreparationConfiguration.fixMinRaderPrimeFFT = app->configuration.fixMaxRaderRadixFFT;
+				kernelPreparationConfiguration.fixMinRaderPrimeMult = app->configuration.fixMaxRaderRadixFFT;
+				kernelPreparationConfiguration.fixMaxRaderPrimeFFT = app->configuration.fixMaxRaderRadixFFT;
+				kernelPreparationConfiguration.fixMaxRaderPrimeMult = app->configuration.fixMaxRaderRadixFFT;
 
 				kernelPreparationConfiguration.device = app->configuration.device;
 #if(VKFFT_BACKEND==0)

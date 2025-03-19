@@ -35,7 +35,7 @@
 #include <inttypes.h>
 #if(VKFFT_BACKEND==0)
 #include "vulkan/vulkan.h"
-#include "glslang_c_interface.h"
+#include "glslang/Include/glslang_c_interface.h"
 #elif(VKFFT_BACKEND==1)
 #include <nvrtc.h>
 #include <cuda.h>
@@ -107,6 +107,6 @@
 #include "vkFFT/vkFFT_AppManagement/vkFFT_DeleteApp.h"
 
 static inline int VkFFTGetVersion() {
-	return 10304; //X.XX.XX format
+	return 10305; //X.XX.XX format
 }
 #endif

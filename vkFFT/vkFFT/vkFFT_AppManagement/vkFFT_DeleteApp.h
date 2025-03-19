@@ -26,45 +26,22 @@
 #include "vkFFT/vkFFT_PlanManagement/vkFFT_API_handles/vkFFT_UpdateBuffers.h"
 
 static inline void deleteVkFFT(VkFFTApplication* app) {
-#if(VKFFT_BACKEND==0)
-	if (app->configuration.isCompilerInitialized) {
-		glslang_finalize_process();
-		app->configuration.isCompilerInitialized = 0;
+	if (app == 0) {
+		return;
 	}
-#elif(VKFFT_BACKEND==1)
-	if (app->configuration.num_streams > 1) {
-		cudaError_t res_t = cudaSuccess;
-		for (pfUINT i = 0; i < app->configuration.num_streams; i++) {
-			if (app->configuration.stream_event[i] != 0) {
-				res_t = cudaEventDestroy(app->configuration.stream_event[i]);
-				if (res_t == cudaSuccess) app->configuration.stream_event[i] = 0;
-			}
-		}
-		if (app->configuration.stream_event != 0) {
-			free(app->configuration.stream_event);
-			app->configuration.stream_event = 0;
-		}
-	}
-#elif(VKFFT_BACKEND==2)
-	if (app->configuration.num_streams > 1) {
-		hipError_t res_t = hipSuccess;
-		for (pfUINT i = 0; i < app->configuration.num_streams; i++) {
-			if (app->configuration.stream_event[i] != 0) {
-				res_t = hipEventDestroy(app->configuration.stream_event[i]);
-				if (res_t == hipSuccess) app->configuration.stream_event[i] = 0;
-			}
-		}
-		if (app->configuration.stream_event != 0) {
-			free(app->configuration.stream_event);
-			app->configuration.stream_event = 0;
-		}
-	}
-#endif
 	if (app->numRaderFFTPrimes) {
 		for (pfUINT i = 0; i < app->numRaderFFTPrimes; i++) {
 			free(app->raderFFTkernel[i]);
 			app->raderFFTkernel[i] = 0;
 		}
+	}
+	if (app->configuration.bufferSize != 0) {
+		free(app->configuration.bufferSize);
+		app->configuration.bufferSize = 0;
+	}
+	if (app->configuration.buffer != 0) {
+		free((void*)app->configuration.buffer);
+		app->configuration.buffer = 0;
 	}
 	if (!app->configuration.userTempBuffer) {
 		if (app->configuration.allocateTempBuffer && (app->configuration.tempBuffer != 0)) {
@@ -107,14 +84,52 @@ static inline void deleteVkFFT(VkFFTApplication* app) {
 				((MTL::Buffer*)app->configuration.tempBuffer[0])->release();
 			}
 #endif
-			if (app->configuration.tempBuffer != 0) {
-				free(app->configuration.tempBuffer);
-				app->configuration.tempBuffer = 0;
-			}
 		}
-		if (app->configuration.tempBufferSize != 0) {
-			free(app->configuration.tempBufferSize);
-			app->configuration.tempBufferSize = 0;
+	}
+	if (app->configuration.tempBufferSize != 0) {
+		free(app->configuration.tempBufferSize);
+		app->configuration.tempBufferSize = 0;
+	}
+	if (app->configuration.tempBuffer != 0) {
+		free(app->configuration.tempBuffer);
+		app->configuration.tempBuffer = 0;
+	}
+	if (app->configuration.isInputFormatted) {
+		if (app->configuration.inputBufferSize != 0) {
+			free(app->configuration.inputBufferSize);
+			app->configuration.inputBufferSize = 0;
+		}
+		if (app->configuration.inputBuffer != 0) {
+			free((void*)app->configuration.inputBuffer);
+			app->configuration.inputBuffer = 0;
+		}
+	}
+	else {
+		app->configuration.inputBufferSize = 0;
+		app->configuration.inputBuffer = 0;
+	}
+	if (app->configuration.isOutputFormatted) {
+		if (app->configuration.outputBufferSize != 0) {
+			free(app->configuration.outputBufferSize);
+			app->configuration.outputBufferSize = 0;
+		}
+		if (app->configuration.outputBuffer != 0) {
+			free((void*)app->configuration.outputBuffer);
+			app->configuration.outputBuffer = 0;
+		}
+	}
+	else {
+		app->configuration.outputBufferSize = 0;
+		app->configuration.outputBuffer = 0;
+	}
+	if (app->configuration.performConvolution) {
+		if (app->configuration.kernelSize != 0) {
+			free(app->configuration.kernelSize);
+			app->configuration.kernelSize = 0;
+		}
+		if (app->configuration.kernel != 0) {
+			free((void*)app->configuration.kernel);
+			app->configuration.kernel = 0;
 		}
 	}
 	for (pfUINT i = 0; i < app->configuration.FFTdim; i++) {
@@ -309,16 +324,119 @@ static inline void deleteVkFFT(VkFFTApplication* app) {
 			}
 		}
 	}
-	if (app->configuration.autoCustomBluesteinPaddingPattern) {
-		if (app->configuration.primeSizes != 0) {
-			free(app->configuration.primeSizes);
-			app->configuration.primeSizes = 0;
+	if (app->configuration.primeSizes != 0) {
+		free(app->configuration.primeSizes);
+		app->configuration.primeSizes = 0;
+	}
+	if (app->configuration.paddedSizes != 0) {
+		free(app->configuration.paddedSizes);
+		app->configuration.paddedSizes = 0;
+	}
+#if(VKFFT_BACKEND==0)
+	if (app->configuration.isCompilerInitialized) {
+		glslang_finalize_process();
+		app->configuration.isCompilerInitialized = 0;
+	}
+	if (app->configuration.physicalDevice) {
+		free(app->configuration.physicalDevice);
+		app->configuration.physicalDevice = 0;
+	}
+	if (app->configuration.device) {
+		free(app->configuration.device);
+		app->configuration.device = 0;
+	}
+	if (app->configuration.queue) {
+		free(app->configuration.queue);
+		app->configuration.queue = 0;
+	}
+	if (app->configuration.commandPool) {
+		free(app->configuration.commandPool);
+		app->configuration.commandPool = 0;
+	}
+	if (app->configuration.fence) {
+		free(app->configuration.fence);
+		app->configuration.fence = 0;
+	}
+	if (app->configuration.pipelineCache != 0) {
+		free(app->configuration.pipelineCache);
+		app->configuration.pipelineCache = 0;
+	}
+	if (app->configuration.stagingBuffer != 0) {
+		free(app->configuration.stagingBuffer);
+		app->configuration.stagingBuffer = 0;
+	}
+	if (app->configuration.stagingBufferMemory != 0) {
+		free(app->configuration.stagingBufferMemory);
+		app->configuration.stagingBufferMemory = 0;
+	}
+#elif(VKFFT_BACKEND==1)
+	if (app->configuration.device) {
+		free(app->configuration.device);
+		app->configuration.device = 0;
+	}
+	if (app->configuration.stream) {
+		free(app->configuration.stream);
+		app->configuration.stream = 0;
+	}
+	if (app->configuration.num_streams > 1) {
+		cudaError_t res_t = cudaSuccess;
+		for (pfUINT i = 0; i < app->configuration.num_streams; i++) {
+			if (app->configuration.stream_event[i] != 0) {
+				res_t = cudaEventDestroy(app->configuration.stream_event[i]);
+				if (res_t == cudaSuccess) app->configuration.stream_event[i] = 0;
+			}
 		}
-		if (app->configuration.paddedSizes != 0) {
-			free(app->configuration.paddedSizes);
-			app->configuration.paddedSizes = 0;
+		if (app->configuration.stream_event != 0) {
+			free(app->configuration.stream_event);
+			app->configuration.stream_event = 0;
 		}
 	}
+#elif(VKFFT_BACKEND==2)
+	if (app->configuration.device) {
+		free(app->configuration.device);
+		app->configuration.device = 0;
+	}
+	if (app->configuration.stream) {
+		free(app->configuration.stream);
+		app->configuration.stream = 0;
+	}
+	if (app->configuration.num_streams > 1) {
+		hipError_t res_t = hipSuccess;
+		for (pfUINT i = 0; i < app->configuration.num_streams; i++) {
+			if (app->configuration.stream_event[i] != 0) {
+				res_t = hipEventDestroy(app->configuration.stream_event[i]);
+				if (res_t == hipSuccess) app->configuration.stream_event[i] = 0;
+			}
+		}
+		if (app->configuration.stream_event != 0) {
+			free(app->configuration.stream_event);
+			app->configuration.stream_event = 0;
+		}
+	}
+#elif(VKFFT_BACKEND==3)
+	if (app->configuration.device) {
+		free(app->configuration.device);
+		app->configuration.device = 0;
+	}
+	if (app->configuration.context) {
+		free(app->configuration.context);
+		app->configuration.context = 0;
+	}
+#elif(VKFFT_BACKEND==4)
+	if (app->configuration.device) {
+		free(app->configuration.device);
+		app->configuration.device = 0;
+	}
+	if (app->configuration.context) {
+		free(app->configuration.context);
+		app->configuration.context = 0;
+	}
+	if (app->configuration.commandQueue) {
+		free(app->configuration.commandQueue);
+		app->configuration.commandQueue = 0;
+	}
+#elif(VKFFT_BACKEND==5)
+#endif
 	memset(app, 0, sizeof(VkFFTApplication));
 }
 #endif

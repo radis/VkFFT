@@ -156,24 +156,36 @@ static inline void checkZeropadStart_currentFFTAxis(VkFFTSpecializationConstants
 			else {
 				PfIf_ge_start(sc, inoutID, &sc->fft_zeropad_right_read[sc->axis_id]);
 			}
-			temp_int.data.i = 1;
-			PfMov(sc, &sc->tempInt, &temp_int);
+            if ((sc->numAxisUploads > 1) && (sc->zeropadBluestein[readWrite])) {
+                if (readWrite)
+                    PfIf_lt_start(sc, inoutID, &sc->fft_zeropad_Bluestein_left_write[sc->axis_id]);
+                else
+                    PfIf_lt_start(sc, inoutID, &sc->fft_zeropad_Bluestein_left_read[sc->axis_id]);
+                temp_int.data.i = 1;
+                PfMov(sc, &sc->tempInt, &temp_int);
+                PfIf_end(sc);
+            }
+            else {
+                temp_int.data.i = 1;
+                PfMov(sc, &sc->tempInt, &temp_int);
+            }
 			PfIf_end(sc);
 
 			PfIf_end(sc);
 		}
-
-		if (sc->numAxisUploads > 1) {
-			if (sc->zeropadBluestein[readWrite]) {
-				if (readWrite)
-					PfIf_lt_start(sc, inoutID, &sc->fft_zeropad_Bluestein_left_write[sc->axis_id]);
-				else
-					PfIf_lt_start(sc, inoutID, &sc->fft_zeropad_Bluestein_left_read[sc->axis_id]);
-				temp_int.data.i = 1;
-				PfMov(sc, &sc->tempInt, &temp_int);
-				PfIf_end(sc);
-			}
-		}
+        else {
+            if (sc->numAxisUploads > 1) {
+                if (sc->zeropadBluestein[readWrite]) {
+                    if (readWrite)
+                        PfIf_lt_start(sc, inoutID, &sc->fft_zeropad_Bluestein_left_write[sc->axis_id]);
+                    else
+                        PfIf_lt_start(sc, inoutID, &sc->fft_zeropad_Bluestein_left_read[sc->axis_id]);
+                    temp_int.data.i = 1;
+                    PfMov(sc, &sc->tempInt, &temp_int);
+                    PfIf_end(sc);
+                }
+            }
+        }
 		temp_int.data.i = 0;
 		PfIf_gt_start(sc, &sc->tempInt, &temp_int);
 	}

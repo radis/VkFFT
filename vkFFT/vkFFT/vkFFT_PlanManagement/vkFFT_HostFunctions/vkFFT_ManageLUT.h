@@ -49,59 +49,23 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
 				case 2:
 					maxStageSum += dimMult;
 					break;
-				case 3:
-					maxStageSum += dimMult * 2;
-					break;
 				case 4:
 					maxStageSum += dimMult * 2;
-					break;
-				case 5:
-					maxStageSum += dimMult * 4;
-					break;
-				case 6:
-					maxStageSum += dimMult * 5;
-					break;
-				case 7:
-						maxStageSum += dimMult * 6;
 					break;
 				case 8:
 					maxStageSum += dimMult * 3;
 					break;
-				case 9:
-					maxStageSum += dimMult * 8;
-					break;
-				case 10:
-					maxStageSum += dimMult * 9;
-					break;
-				case 11:
-					if (app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory)
-						maxStageSum += dimMult * 11;
-					else 
-						maxStageSum += dimMult * 10;
-					break;
-				case 12:
-					maxStageSum += dimMult * 11;
-					break;
-				case 13:
-					if (app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory)
-						maxStageSum += dimMult * 13;
-					else 
-						maxStageSum += dimMult * 12;
-					break;
-				case 14:
-					maxStageSum += dimMult * 13;
-					break;
-				case 15:
-					maxStageSum += dimMult * 14;
-					break;
-				case 16:
+				/*case 16:
 					maxStageSum += dimMult * 4;
 					break;
 				case 32:
 					maxStageSum += dimMult * 5;
-					break;
+					break;*/
 				default:
-					maxStageSum += dimMult * (axis->specializationConstants.stageRadix[i]);
+					if (axis->specializationConstants.rader_generator[i] > 0)
+						maxStageSum += dimMult * (axis->specializationConstants.stageRadix[i]);
+					else
+						maxStageSum += dimMult * (axis->specializationConstants.stageRadix[i]-1);
 					break;
 				}
 			}
@@ -119,59 +83,20 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
 						case 2:
 							maxStageSum += dimMult;
 							break;
-						case 3:
-							maxStageSum += dimMult * 2;
-							break;
 						case 4:
 							maxStageSum += dimMult * 2;
-							break;
-						case 5:
-							maxStageSum += dimMult * 4;
-							break;
-						case 6:
-							maxStageSum += dimMult * 5;
-							break;
-						case 7:
-								maxStageSum += dimMult * 6;
 							break;
 						case 8:
 							maxStageSum += dimMult * 3;
 							break;
-						case 9:
-							maxStageSum += dimMult * 8;
-							break;
-						case 10:
-							maxStageSum += dimMult * 9;
-							break;
-						case 11:
-							if (app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory)
-								maxStageSum += dimMult * 11;
-							else 
-								maxStageSum += dimMult * 10;
-							break;
-						case 12:
-							maxStageSum += dimMult * 11;
-							break;
-						case 13:
-							if (app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory)
-								maxStageSum += dimMult * 13;
-							else 
-								maxStageSum += dimMult * 12;
-							break;
-						case 14:
-							maxStageSum += dimMult * 13;
-							break;
-						case 15:
-							maxStageSum += dimMult * 14;
-							break;
-						case 16:
+						/*case 16:
 							maxStageSum += dimMult * 4;
 							break;
 						case 32:
 							maxStageSum += dimMult * 5;
-							break;
+							break;*/
 						default:
-							maxStageSum += dimMult * (axis->specializationConstants.raderContainer[k].stageRadix[i]);
+							maxStageSum += dimMult * (axis->specializationConstants.raderContainer[k].stageRadix[i]-1);
 							break;
 						}
 					}
@@ -192,59 +117,20 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
 						case 2:
 							maxStageSum += dimMult;
 							break;
-						case 3:
-							maxStageSum += dimMult * 2;
-							break;
 						case 4:
 							maxStageSum += dimMult * 2;
-							break;
-						case 5:
-							maxStageSum += dimMult * 4;
-							break;
-						case 6:
-							maxStageSum += dimMult * 5;
-							break;
-						case 7:
-								maxStageSum += dimMult * 6;
 							break;
 						case 8:
 							maxStageSum += dimMult * 3;
 							break;
-						case 9:
-							maxStageSum += dimMult * 8;
-							break;
-						case 10:
-							maxStageSum += dimMult * 9;
-							break;
-						case 11:
-							if (app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory)
-								maxStageSum += dimMult * 11;
-							else 
-								maxStageSum += dimMult * 10;
-							break;
-						case 12:
-							maxStageSum += dimMult * 11;
-							break;
-						case 13:
-							if (app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory)
-								maxStageSum += dimMult * 13;
-							else 
-								maxStageSum += dimMult * 12;
-							break;
-						case 14:
-							maxStageSum += dimMult * 13;
-							break;
-						case 15:
-							maxStageSum += dimMult * 14;
-							break;
-						case 16:
+						/*case 16:
 							maxStageSum += dimMult * 4;
 							break;
 						case 32:
 							maxStageSum += dimMult * 5;
-							break;
+							break;*/
 						default:
-							maxStageSum += dimMult * (axis->specializationConstants.raderContainer[k].stageRadix[i]);
+							maxStageSum += dimMult * (axis->specializationConstants.raderContainer[k].stageRadix[i]-1);
 							break;
 						}
 					}
@@ -256,7 +142,12 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
 		}
 
 		pfUINT currentLUTPos = maxStageSum;
-		if ((app->configuration.useLUT_4step == 1) && (axis->specializationConstants.axis_upload_id > 0)) currentLUTPos += axis->specializationConstants.stageStartSize.data.i * axis->specializationConstants.fftDim.data.i;
+		if ((app->configuration.useLUT_4step == 1) && (axis->specializationConstants.axis_upload_id > 0)) {
+			if (axis->specializationConstants.reorderFourStep == 2) 
+				currentLUTPos += axis->specializationConstants.fft_dim_full.data.i / axis->specializationConstants.firstStageStartSize.data.i;
+			else
+				currentLUTPos += axis->specializationConstants.stageStartSize.data.i * axis->specializationConstants.fftDim.data.i;
+		}
 		pfUINT disableReferenceLUT_DCT = 0;
 		if ((((((axis->specializationConstants.performDCT == 3) || (axis->specializationConstants.performDST == 3)) && (axis->specializationConstants.actualInverse == 0)) || (((axis->specializationConstants.performDCT == 2) || (axis->specializationConstants.performDST == 2)) && (axis->specializationConstants.actualInverse == 1)))) || (((((axis->specializationConstants.performDCT == 2) || (axis->specializationConstants.performDST == 2)) && (axis->specializationConstants.actualInverse == 0)) || (((axis->specializationConstants.performDCT == 3) || (axis->specializationConstants.performDST == 3)) && (axis->specializationConstants.actualInverse == 1))))) {
 			disableReferenceLUT_DCT = 1;
@@ -305,7 +196,7 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
 			in.type = 22;
 
 			for (pfUINT i = 1; i < axis->specializationConstants.numStages; i++) {
-				if ((axis->specializationConstants.stageRadix[i] & (axis->specializationConstants.stageRadix[i] - 1)) == 0) {
+				if (((axis->specializationConstants.stageRadix[i] & (axis->specializationConstants.stageRadix[i] - 1)) == 0) && (axis->specializationConstants.stageRadix[i]<16)) {
 					for (pfUINT k = 0; k < log2(axis->specializationConstants.stageRadix[i]); k++) {
 						for (pfUINT j = 0; j < localStageSize; j++) {
 							in.data.d = pfcos(j * double_PI / localStageSize / pow(2, k));
@@ -380,7 +271,7 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
 						localStageSize = axis->specializationConstants.raderContainer[i].stageRadix[0];
 						localStageSum = 0;
 						for (pfUINT l = 1; l < axis->specializationConstants.raderContainer[i].numStages; l++) {
-							if ((axis->specializationConstants.raderContainer[i].stageRadix[l] & (axis->specializationConstants.raderContainer[i].stageRadix[l] - 1)) == 0) {
+							if (((axis->specializationConstants.raderContainer[i].stageRadix[l] & (axis->specializationConstants.raderContainer[i].stageRadix[l] - 1)) == 0) && (axis->specializationConstants.raderContainer[i].stageRadix[l]<16)){
 								for (pfUINT k = 0; k < log2(axis->specializationConstants.raderContainer[i].stageRadix[l]); k++) {
 									for (pfUINT j = 0; j < localStageSize; j++) {
 										in.data.d = pfcos(j * double_PI / localStageSize / pow(2, k));
@@ -416,7 +307,7 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
 						localStageSize = axis->specializationConstants.raderContainer[i].stageRadix[axis->specializationConstants.raderContainer[i].numStages - 1];
 						localStageSum = 0;
 						for (pfINT l = (pfINT)axis->specializationConstants.raderContainer[i].numStages - 2; l >= 0; l--) {
-							if ((axis->specializationConstants.raderContainer[i].stageRadix[l] & (axis->specializationConstants.raderContainer[i].stageRadix[l] - 1)) == 0) {
+							if (((axis->specializationConstants.raderContainer[i].stageRadix[l] & (axis->specializationConstants.raderContainer[i].stageRadix[l] - 1)) == 0) && (axis->specializationConstants.raderContainer[i].stageRadix[l]<16)){
 								for (pfUINT k = 0; k < log2(axis->specializationConstants.raderContainer[i].stageRadix[l]); k++) {
 									for (pfUINT j = 0; j < localStageSize; j++) {
 										in.data.d = pfcos(j * double_PI / localStageSize / pow(2, k));
@@ -466,17 +357,18 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
 				}
 			}
 			if ((axis->specializationConstants.axis_upload_id > 0) && (app->configuration.useLUT_4step == 1)) {
-				for (pfUINT i = 0; i < (pfUINT)axis->specializationConstants.stageStartSize.data.i; i++) {
+				pfUINT size_local_2d_split = (axis->specializationConstants.reorderFourStep == 2) ? axis->specializationConstants.fft_dim_full.data.i / axis->specializationConstants.firstStageStartSize.data.i / axis->specializationConstants.fftDim.data.i : axis->specializationConstants.stageStartSize.data.i;
+				for (pfUINT i = 0; i < size_local_2d_split; i++) {
 					for (pfUINT j = 0; j < (pfUINT)axis->specializationConstants.fftDim.data.i; j++) {
-						pfLD angle = pfFPinit("2.0") * double_PI * ((i * j) / (pfLD)(axis->specializationConstants.stageStartSize.data.i * axis->specializationConstants.fftDim.data.i));
+						pfLD angle = pfFPinit("2.0") * double_PI * ((i * j) / (pfLD)(size_local_2d_split * axis->specializationConstants.fftDim.data.i));
 						in.data.d = pfcos(angle);
 						PfConvToDoubleDouble(&axis->specializationConstants, &temp1, &in);
-						tempLUT[maxStageSum * 4 + 4 * (i + j * axis->specializationConstants.stageStartSize.data.i)] = (double)temp1.data.dd[0].data.d;
-						tempLUT[maxStageSum * 4 + 4 * (i + j * axis->specializationConstants.stageStartSize.data.i) + 1] = (double)temp1.data.dd[1].data.d;
+						tempLUT[maxStageSum * 4 + 4 * (i + j * size_local_2d_split)] = (double)temp1.data.dd[0].data.d;
+						tempLUT[maxStageSum * 4 + 4 * (i + j * size_local_2d_split) + 1] = (double)temp1.data.dd[1].data.d;
 						in.data.d = pfsin(angle);
 						PfConvToDoubleDouble(&axis->specializationConstants, &temp1, &in);
-						tempLUT[maxStageSum * 4 + 4 * (i + j * axis->specializationConstants.stageStartSize.data.i) + 2] = (double)temp1.data.dd[0].data.d;
-						tempLUT[maxStageSum * 4 + 4 * (i + j * axis->specializationConstants.stageStartSize.data.i) + 3] = (double)temp1.data.dd[1].data.d;
+						tempLUT[maxStageSum * 4 + 4 * (i + j * size_local_2d_split) + 2] = (double)temp1.data.dd[0].data.d;
+						tempLUT[maxStageSum * 4 + 4 * (i + j * size_local_2d_split) + 3] = (double)temp1.data.dd[1].data.d;
 					}
 				}
 			}
@@ -684,7 +576,7 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
 			pfUINT localStageSize = axis->specializationConstants.stageRadix[0];
 			pfUINT localStageSum = 0;
 			for (pfUINT i = 1; i < axis->specializationConstants.numStages; i++) {
-				if ((axis->specializationConstants.stageRadix[i] & (axis->specializationConstants.stageRadix[i] - 1)) == 0) {
+				if  (((axis->specializationConstants.stageRadix[i] & (axis->specializationConstants.stageRadix[i] - 1)) == 0) && (axis->specializationConstants.stageRadix[i]<16)) {
 					for (pfUINT k = 0; k < log2(axis->specializationConstants.stageRadix[i]); k++) {
 						for (pfUINT j = 0; j < localStageSize; j++) {
 							tempLUT[2 * (j + localStageSum)] = (double)pfcos(j * double_PI / localStageSize / pow(2, k));
@@ -733,7 +625,7 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
 						localStageSize = axis->specializationConstants.raderContainer[i].stageRadix[0];
 						localStageSum = 0;
 						for (pfUINT l = 1; l < axis->specializationConstants.raderContainer[i].numStages; l++) {
-							if ((axis->specializationConstants.raderContainer[i].stageRadix[l] & (axis->specializationConstants.raderContainer[i].stageRadix[l] - 1)) == 0) {
+							if (((axis->specializationConstants.raderContainer[i].stageRadix[l] & (axis->specializationConstants.raderContainer[i].stageRadix[l] - 1)) == 0) && (axis->specializationConstants.raderContainer[i].stageRadix[l]<16)){
 								for (pfUINT k = 0; k < log2(axis->specializationConstants.raderContainer[i].stageRadix[l]); k++) {
 									for (pfUINT j = 0; j < localStageSize; j++) {
 										tempLUT[2 * (j + localStageSum + axis->specializationConstants.raderContainer[i].RaderRadixOffsetLUT)] = (double)pfcos(j * double_PI / localStageSize / pow(2, k));
@@ -757,7 +649,7 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
 						localStageSize = axis->specializationConstants.raderContainer[i].stageRadix[axis->specializationConstants.raderContainer[i].numStages - 1];
 						localStageSum = 0;
 						for (pfINT l = (pfINT)axis->specializationConstants.raderContainer[i].numStages - 2; l >= 0; l--) {
-							if ((axis->specializationConstants.raderContainer[i].stageRadix[l] & (axis->specializationConstants.raderContainer[i].stageRadix[l] - 1)) == 0) {
+							if (((axis->specializationConstants.raderContainer[i].stageRadix[l] & (axis->specializationConstants.raderContainer[i].stageRadix[l] - 1)) == 0) && (axis->specializationConstants.raderContainer[i].stageRadix[l]<16)){
 								for (pfUINT k = 0; k < log2(axis->specializationConstants.raderContainer[i].stageRadix[l]); k++) {
 									for (pfUINT j = 0; j < localStageSize; j++) {
 										tempLUT[2 * (j + localStageSum + axis->specializationConstants.raderContainer[i].RaderRadixOffsetLUTiFFT)] = (double)pfcos(j * double_PI / localStageSize / pow(2, k));
@@ -789,11 +681,12 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
 				}
 			}
 			if ((axis->specializationConstants.axis_upload_id > 0) && (app->configuration.useLUT_4step == 1)) {
-				for (pfUINT i = 0; i < (pfUINT)axis->specializationConstants.stageStartSize.data.i; i++) {
+				pfUINT size_local_2d_split = (axis->specializationConstants.reorderFourStep == 2) ? axis->specializationConstants.fft_dim_full.data.i / axis->specializationConstants.firstStageStartSize.data.i / axis->specializationConstants.fftDim.data.i : axis->specializationConstants.stageStartSize.data.i;
+				for (pfUINT i = 0; i < size_local_2d_split; i++) {
 					for (pfUINT j = 0; j < (pfUINT)axis->specializationConstants.fftDim.data.i; j++) {
-						pfLD angle = 2 * double_PI * ((i * j) / (pfLD)(axis->specializationConstants.stageStartSize.data.i * axis->specializationConstants.fftDim.data.i));
-						tempLUT[maxStageSum * 2 + 2 * (i + j * axis->specializationConstants.stageStartSize.data.i)] = (double)pfcos(angle);
-						tempLUT[maxStageSum * 2 + 2 * (i + j * axis->specializationConstants.stageStartSize.data.i) + 1] = (double)pfsin(angle);
+						pfLD angle = 2 * double_PI * ((i * j) / (pfLD)(size_local_2d_split * axis->specializationConstants.fftDim.data.i));
+						tempLUT[maxStageSum * 2 + 2 * (i + j * size_local_2d_split)] = (double)pfcos(angle);
+						tempLUT[maxStageSum * 2 + 2 * (i + j * size_local_2d_split) + 1] = (double)pfsin(angle);
 					}
 				}
 			}
@@ -982,7 +875,7 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
 			pfUINT localStageSize = axis->specializationConstants.stageRadix[0];
 			pfUINT localStageSum = 0;
 			for (pfUINT i = 1; i < axis->specializationConstants.numStages; i++) {
-				if ((axis->specializationConstants.stageRadix[i] & (axis->specializationConstants.stageRadix[i] - 1)) == 0) {
+				if (((axis->specializationConstants.stageRadix[i] & (axis->specializationConstants.stageRadix[i] - 1)) == 0) && (axis->specializationConstants.stageRadix[i]<16)){
 					for (pfUINT k = 0; k < log2(axis->specializationConstants.stageRadix[i]); k++) {
 						for (pfUINT j = 0; j < localStageSize; j++) {
 							tempLUT[2 * (j + localStageSum)] = (float)pfcos(j * double_PI / localStageSize / pow(2, k));
@@ -1030,7 +923,7 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
 						localStageSize = axis->specializationConstants.raderContainer[i].stageRadix[0];
 						localStageSum = 0;
 						for (pfUINT l = 1; l < axis->specializationConstants.raderContainer[i].numStages; l++) {
-							if ((axis->specializationConstants.raderContainer[i].stageRadix[l] & (axis->specializationConstants.raderContainer[i].stageRadix[l] - 1)) == 0) {
+							if (((axis->specializationConstants.raderContainer[i].stageRadix[l] & (axis->specializationConstants.raderContainer[i].stageRadix[l] - 1)) == 0) && (axis->specializationConstants.raderContainer[i].stageRadix[l]<16)){
 								for (pfUINT k = 0; k < log2(axis->specializationConstants.raderContainer[i].stageRadix[l]); k++) {
 									for (pfUINT j = 0; j < localStageSize; j++) {
 										tempLUT[2 * (j + localStageSum + axis->specializationConstants.raderContainer[i].RaderRadixOffsetLUT)] = (float)pfcos(j * double_PI / localStageSize / pow(2, k));
@@ -1053,7 +946,7 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
 						localStageSize = axis->specializationConstants.raderContainer[i].stageRadix[axis->specializationConstants.raderContainer[i].numStages - 1];
 						localStageSum = 0;
 						for (pfINT l = (pfINT)axis->specializationConstants.raderContainer[i].numStages - 2; l >= 0; l--) {
-							if ((axis->specializationConstants.raderContainer[i].stageRadix[l] & (axis->specializationConstants.raderContainer[i].stageRadix[l] - 1)) == 0) {
+							if (((axis->specializationConstants.raderContainer[i].stageRadix[l] & (axis->specializationConstants.raderContainer[i].stageRadix[l] - 1)) == 0) && (axis->specializationConstants.raderContainer[i].stageRadix[l]<16)){
 								for (pfUINT k = 0; k < log2(axis->specializationConstants.raderContainer[i].stageRadix[l]); k++) {
 									for (pfUINT j = 0; j < localStageSize; j++) {
 										tempLUT[2 * (j + localStageSum + axis->specializationConstants.raderContainer[i].RaderRadixOffsetLUTiFFT)] = (float)pfcos(j * double_PI / localStageSize / pow(2, k));
@@ -1085,11 +978,12 @@ static inline VkFFTResult VkFFT_AllocateLUT(VkFFTApplication* app, VkFFTPlan* FF
 			}
 
 			if ((axis->specializationConstants.axis_upload_id > 0) && (app->configuration.useLUT_4step == 1)) {
-				for (pfUINT i = 0; i < (pfUINT)axis->specializationConstants.stageStartSize.data.i; i++) {
+				pfUINT size_local_2d_split = (axis->specializationConstants.reorderFourStep == 2) ? axis->specializationConstants.fft_dim_full.data.i / axis->specializationConstants.firstStageStartSize.data.i / axis->specializationConstants.fftDim.data.i : axis->specializationConstants.stageStartSize.data.i;
+				for (pfUINT i = 0; i < size_local_2d_split; i++) {
 					for (pfUINT j = 0; j < (pfUINT)axis->specializationConstants.fftDim.data.i; j++) {
-						double angle = 2 * double_PI * ((i * j) / (double)(axis->specializationConstants.stageStartSize.data.i * axis->specializationConstants.fftDim.data.i));
-						tempLUT[maxStageSum * 2 + 2 * (i + j * axis->specializationConstants.stageStartSize.data.i)] = (float)pfcos(angle);
-						tempLUT[maxStageSum * 2 + 2 * (i + j * axis->specializationConstants.stageStartSize.data.i) + 1] = (float)pfsin(angle);
+						double angle = 2 * double_PI * ((i * j) / (double)(size_local_2d_split * axis->specializationConstants.fftDim.data.i));
+						tempLUT[maxStageSum * 2 + 2 * (i + j * size_local_2d_split)] = (float)pfcos(angle);
+						tempLUT[maxStageSum * 2 + 2 * (i + j * size_local_2d_split) + 1] = (float)pfsin(angle);
 					}
 				}
 			}

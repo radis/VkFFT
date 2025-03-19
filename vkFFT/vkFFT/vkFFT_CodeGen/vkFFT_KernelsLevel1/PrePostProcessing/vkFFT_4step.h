@@ -43,10 +43,15 @@ static inline void appendReorder4Step(VkFFTSpecializationConstantsLayout* sc, in
 		logicalRegistersPerThread = (sc->rader_generator[sc->numStages - 1] > 0) ? sc->min_registers_per_thread : sc->registers_per_thread_per_radix[sc->stageRadix[sc->numStages - 1]];// (sc->registers_per_thread % sc->stageRadix[sc->numStages - 1] == 0) ? sc->registers_per_thread : sc->min_registers_per_thread;
 	switch (type) {
 	case 1: case 2: {//grouped_c2c
-		if ((sc->stageStartSize.data.i > 1) && (((!sc->reorderFourStep) && (sc->inverse) && (readWrite==0)) || ((!((sc->stageStartSize.data.i > 1) && (!sc->reorderFourStep) && (sc->inverse))) && (readWrite == 1)))) {
+		if ((sc->axis_upload_id > 0) && (((!sc->reorderFourStep) && (sc->inverse) && (readWrite==0)) || ((!((!sc->reorderFourStep) && (sc->inverse))) && (readWrite == 1)))) {
 			if (((!sc->readToRegisters) && (readWrite==0))|| ((!sc->writeFromRegisters) && (readWrite == 1))) {
 				appendBarrierVkFFT(sc);
 			}
+			if ((sc->axis_id == 0) && (sc->axis_upload_id == (sc->numAxisUploads - 1)) && (sc->reorderFourStep == 2) && (readWrite == 1) && (!sc->disableTransposeSharedReorderFourStepForWrite)) {
+				appendBarrierVkFFT(sc);
+				//PfMov(sc, &sc->sharedStride, &sc->sharedStride4StepLastAxisConflict);
+			}
+						
 			if (sc->useDisableThreads) {
 				temp_int.data.i = 0;
 				PfIf_gt_start(sc, &sc->disableThreads, &temp_int);
@@ -54,14 +59,29 @@ static inline void appendReorder4Step(VkFFTSpecializationConstantsLayout* sc, in
 			PfDivCeil(sc, &temp_int1, &sc->fftDim, &sc->localSize[1]);
 			if (type == 1) {
 				PfDiv(sc, &sc->inoutID, &sc->shiftX, &sc->fft_dim_x);
-				PfMod(sc, &sc->inoutID, &sc->inoutID, &sc->stageStartSize);
+				if (sc->reorderFourStep == 2) {
+					PfDiv(sc, &sc->inoutID, &sc->inoutID, &sc->firstStageStartSize);
+					temp_int.data.i = sc->fft_dim_full.data.i / sc->firstStageStartSize.data.i / sc->fftDim.data.i;
+					PfMod(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+				}
+				else {
+					PfMod(sc, &sc->inoutID, &sc->inoutID, &sc->stageStartSize);
+				}
 			}
 			else {
-				PfMod(sc, &sc->inoutID, &sc->shiftX, &sc->stageStartSize);
+				if (sc->reorderFourStep == 2)
+				{
+					PfDiv(sc, &sc->inoutID, &sc->shiftX, &sc->firstStageStartSize);
+					temp_int.data.i = sc->fft_dim_full.data.i / sc->firstStageStartSize.data.i / sc->fftDim.data.i;
+					PfMod(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+				}
+				else {
+					PfMod(sc, &sc->inoutID, &sc->shiftX, &sc->stageStartSize);
+				}
 			}
 			for (pfUINT i = 0; i < (pfUINT)temp_int1.data.i; i++) {
 				PfMod(sc, &temp_int, &sc->fftDim, &sc->localSize[1]);
-				if ((temp_int.data.i != 0) && (i == (temp_int1.data.i - 1))) {
+				if ((temp_int.data.i != 0) && ((int64_t)i == (temp_int1.data.i - 1))) {
 					PfIf_lt_start(sc, &sc->gl_LocalInvocationID_y, &temp_int);				
 				}
 				pfUINT id = (i / logicalRegistersPerThread) * sc->registers_per_thread + i % logicalRegistersPerThread;
@@ -69,8 +89,16 @@ static inline void appendReorder4Step(VkFFTSpecializationConstantsLayout* sc, in
 				if ((sc->LUT) && (sc->LUT_4step)) {
 					temp_int.data.i = i * sc->localSize[1].data.i;
 					PfAdd(sc, &sc->tempInt, &sc->gl_LocalInvocationID_y, &temp_int);
-					PfMul(sc, &sc->tempInt, &sc->tempInt, &sc->stageStartSize, 0);
-					PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID);
+					if (sc->reorderFourStep == 2)
+					{
+						temp_int.data.i = sc->fft_dim_full.data.i / sc->firstStageStartSize.data.i / sc->fftDim.data.i;
+						PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+						PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID);
+					}
+					else {
+						PfMul(sc, &sc->tempInt, &sc->tempInt, &sc->stageStartSize, 0);
+						PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID);
+					}
 					temp_int.data.i = sc->maxStageSumLUT;
 					PfAdd(sc, &sc->tempInt, &sc->tempInt, &temp_int);
 					appendGlobalToRegisters(sc, &sc->mult, &sc->LUTStruct, &sc->tempInt);
@@ -83,7 +111,11 @@ static inline void appendReorder4Step(VkFFTSpecializationConstantsLayout* sc, in
 					temp_int.data.i = i * sc->localSize[1].data.i;
 					PfAdd(sc, &sc->tempInt, &sc->gl_LocalInvocationID_y, &temp_int);
 					PfMul(sc, &sc->tempInt, &sc->inoutID, &sc->tempInt, 0);
-					temp_double.data.d = pfFPinit("2.0") * sc->double_PI/ (pfLD)(sc->stageStartSize.data.i * sc->fftDim.data.i);
+					if (sc->reorderFourStep == 2)
+						temp_double.data.d = pfFPinit("2.0") * sc->double_PI/ (pfLD)(sc->fft_dim_full.data.i / sc->firstStageStartSize.data.i);
+					else
+						temp_double.data.d = pfFPinit("2.0") * sc->double_PI/ (pfLD)(sc->stageStartSize.data.i * sc->fftDim.data.i);
+					
 					PfMul(sc, &sc->angle, &sc->tempInt, &temp_double, 0);
 					PfSinCos(sc, &sc->mult, &sc->angle);
 					if ((!sc->inverse) && (readWrite == 1)) {
@@ -92,6 +124,13 @@ static inline void appendReorder4Step(VkFFTSpecializationConstantsLayout* sc, in
 				}
 				if (((sc->readToRegisters) && (readWrite == 0)) || ((sc->writeFromRegisters) && (readWrite == 1))) {
 					PfMul(sc, &sc->regIDs[id], &sc->regIDs[id], &sc->mult, &sc->temp);
+					if ((sc->axis_id == 0) && (sc->axis_upload_id == (sc->numAxisUploads - 1)) && (sc->reorderFourStep == 2) && (readWrite == 1) && (!sc->disableTransposeSharedReorderFourStepForWrite)) {
+						temp_int.data.i = i * sc->localSize[1].data.i;
+						PfAdd(sc, &sc->sdataID, &sc->gl_LocalInvocationID_y, &temp_int);
+						PfMul(sc, &sc->sdataID, &sc->sdataID, &sc->sharedStride, 0);
+						PfAdd(sc, &sc->sdataID, &sc->sdataID, &sc->gl_LocalInvocationID_x);
+						appendRegistersToShared(sc, &sc->sdataID, &sc->regIDs[id]);
+					}
 				}
 				else {
 					temp_int.data.i = i * sc->localSize[1].data.i;
@@ -103,9 +142,12 @@ static inline void appendReorder4Step(VkFFTSpecializationConstantsLayout* sc, in
 					appendRegistersToShared(sc, &sc->sdataID, &sc->w);
 				}
 				PfMod(sc, &temp_int, &sc->fftDim, &sc->localSize[1]);
-				if ((temp_int.data.i != 0) && (i == (temp_int1.data.i - 1))) {
+				if ((temp_int.data.i != 0) && ((int64_t)i == (temp_int1.data.i - 1))) {
 					PfIf_end(sc);
 				}
+			}
+			if ((sc->axis_id == 0) && (sc->axis_upload_id == (sc->numAxisUploads - 1)) && (sc->reorderFourStep == 2) && (!sc->disableTransposeSharedReorderFourStepForWrite)) {
+				sc->writeFromRegisters = 0;
 			}
 			if (sc->useDisableThreads) {
 				PfIf_end(sc);

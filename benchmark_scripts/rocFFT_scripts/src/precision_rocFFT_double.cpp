@@ -13,7 +13,7 @@
 
 //ROCM parts
 #include "hip/hip_runtime.h"
-#include <hipfft.h>
+#include <hipfft/hipfft.h>
 
 void launch_precision_rocFFT_double(void* inputC, void* output_rocFFT, int device_id, uint64_t* dims)
 {
