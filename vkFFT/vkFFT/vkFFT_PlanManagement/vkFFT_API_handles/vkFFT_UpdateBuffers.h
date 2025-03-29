@@ -927,8 +927,7 @@ static inline VkFFTResult VkFFTUpdateBufferSet(VkFFTApplication* app, VkFFTPlan*
 							}
 #if(VKFFT_BACKEND==0)
 							if (axis->specializationConstants.performBufferSetUpdate) {
-								//descriptorBufferInfo.range = (axis->specializationConstants.inputBufferBlockSize);
-								descriptorBufferInfo.range = app->configuration.bufferSize[0];
+								descriptorBufferInfo.range = (axis->specializationConstants.inputBufferBlockSize);
 								descriptorBufferInfo.offset = offset * (axis->specializationConstants.inputBufferBlockSize);
 							}
 #endif
@@ -1106,8 +1105,7 @@ static inline VkFFTResult VkFFTUpdateBufferSet(VkFFTApplication* app, VkFFTPlan*
 						}
 #if(VKFFT_BACKEND==0)
 						if (axis->specializationConstants.performBufferSetUpdate) {
-							//descriptorBufferInfo.range = (axis->specializationConstants.outputBufferBlockSize);
-							descriptorBufferInfo.range = app->configuration.bufferSize[0];
+							descriptorBufferInfo.range = (axis->specializationConstants.outputBufferBlockSize);
 							descriptorBufferInfo.offset = offset * (axis->specializationConstants.outputBufferBlockSize);
 						}
 #endif
