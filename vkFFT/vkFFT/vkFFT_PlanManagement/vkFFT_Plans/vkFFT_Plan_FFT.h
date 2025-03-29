@@ -425,8 +425,6 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 	if (app->configuration.specifyOffsetsAtLaunch) {
 		axis->specializationConstants.performPostCompilationInputOffset = 1;
 		axis->specializationConstants.performPostCompilationOutputOffset = 1;
-		//axis->specializationConstants.performPostCompilationCurrentBatch = 1;
-
 		if (app->configuration.performConvolution)
 			axis->specializationConstants.performPostCompilationKernelOffset = 1;
 	}
@@ -437,8 +435,6 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 		axis->specializationConstants.outputOffset.data.i = app->configuration.outputBufferOffset;
 		axis->specializationConstants.kernelOffset.type = 31;
 		axis->specializationConstants.kernelOffset.data.i = app->configuration.kernelOffset;
-		//axis->specializationConstants.currentBatch.type = 31;
-		//axis->specializationConstants.currentBatch.data.i = app->configuration.numberBatches;
 	}
 
 	resFFT = VkFFTCheckUpdateBufferSet(app, axis, 1, 0);
@@ -563,9 +559,6 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 			else
 				axis->specializationConstants.zeropad[1] = 0;
 		}
-		if (app->configuration.dynamicBatch){
-			axis->specializationConstants.dynamicBatch = app->configuration.dynamicBatch;
-		}
 		if ((app->configuration.FFTdim - 1 == axis_id) && (axis_upload_id == 0) && (app->configuration.performConvolution)) {
 			axis->specializationConstants.convolutionStep = 1;
 		}
@@ -679,10 +672,6 @@ static inline VkFFTResult VkFFTPlanAxis(VkFFTApplication* app, VkFFTPlan* FFTPla
 				axis->pushConstants.performPostCompilationKernelOffset = 1;
 				axis->pushConstants.structSize += 1;
 			}
-			// if (axis->specializationConstants.performPostCompilationCurrentBatch) {
-				// axis->pushConstants.performPostCompilationCurrentBatch = 1;
-				// axis->pushConstants.structSize += 1;
-			// }
 			if (app->configuration.useUint64)
 				axis->pushConstants.structSize *= sizeof(pfUINT);
 			else

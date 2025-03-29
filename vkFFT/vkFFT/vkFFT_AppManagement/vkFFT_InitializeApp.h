@@ -911,7 +911,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 		return VKFFT_ERROR_INVALID_QUEUE;
 	}
 	app->configuration.queue = inputLaunchConfiguration.queue;
-	
+
 	const char dummy_kernel[50] = "kernel void VkFFT_dummy (){}";
 	const char function_name[20] = "VkFFT_dummy";
 
@@ -966,16 +966,12 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 	compileOptions->release();
 #endif
 
-	if (inputLaunchConfiguration.dynamicBatch != 0)	app->configuration.dynamicBatch = inputLaunchConfiguration.dynamicBatch;
 	if (inputLaunchConfiguration.indirectDispatch != 0) {
 		app->configuration.indirectDispatch = inputLaunchConfiguration.indirectDispatch;
 		app->configuration.indirectBuffer = inputLaunchConfiguration.indirectBuffer;
 		app->configuration.indirectBufferOffset = inputLaunchConfiguration.indirectBufferOffset;
 		app->configuration.indirectHostPointer = inputLaunchConfiguration.indirectHostPointer;
 	}
-	if (inputLaunchConfiguration.debugName != nullptr) app->configuration.debugName = inputLaunchConfiguration.debugName;
-	app->debugKernelCounter = 0;
-	app->debugUpdateCounter = 0;
 	resFFT = initializeBluesteinAutoPadding(app);
 	if (resFFT != VKFFT_SUCCESS) {
 		deleteVkFFT(app);
@@ -1175,11 +1171,6 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 			}
 		}
 		app->configuration.kernel = inputLaunchConfiguration.kernel;
-	}
-	if (inputLaunchConfiguration.currentBatchUBOSize !=0){
-		app->configuration.currentBatchUBOSize = inputLaunchConfiguration.currentBatchUBOSize;
-		app->configuration.currentBatchUBO = inputLaunchConfiguration.currentBatchUBO;
-		app->configuration.currentBatchUBOOffset = inputLaunchConfiguration.currentBatchUBOOffset;
 	}
 
 	if (inputLaunchConfiguration.bufferOffset != 0)	app->configuration.bufferOffset = inputLaunchConfiguration.bufferOffset;

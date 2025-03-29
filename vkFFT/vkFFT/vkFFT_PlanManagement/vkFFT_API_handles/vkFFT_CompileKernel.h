@@ -22,7 +22,6 @@
 #ifndef VKFFT_COMPILEKERNEL_H
 #define VKFFT_COMPILEKERNEL_H
 #include "vkFFT/vkFFT_Structs/vkFFT_Structs.h"
-using namespace std;
 
 static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* axis) {
 #if(VKFFT_BACKEND==0)
@@ -163,39 +162,21 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 		glslang_target_client_version_t client_version = (app->configuration.halfPrecision) ? GLSLANG_TARGET_VULKAN_1_1 : GLSLANG_TARGET_VULKAN_1_0;
 		glslang_target_language_version_t target_language_version = (app->configuration.halfPrecision) ? GLSLANG_TARGET_SPV_1_3 : GLSLANG_TARGET_SPV_1_0;
 		glslang_input_t input =
-			{	
-				GLSLANG_SOURCE_GLSL,
-				GLSLANG_STAGE_COMPUTE,
-				GLSLANG_CLIENT_VULKAN,
-				client_version,
-				GLSLANG_TARGET_SPV,
-				target_language_version,
-				code0,
-				450,
-				GLSLANG_NO_PROFILE,
-				1,
-				0,
-				GLSLANG_MSG_DEFAULT_BIT,
-				(const glslang_resource_t*)&default_resource,
-			};
-						
-		if (app->configuration.enableDebug){
-			const char* dname = app->configuration.debugName;
-			ofstream myfile;
-			std::string fname = "";
-			
-			fname += dname ;
-			fname += "_kernel_";
-			fname += std::to_string(app->debugKernelCounter) +".comp";
-			
-			myfile.open(fname);
-			myfile << code0;
-			
-			myfile.close();
-			app->debugKernelCounter++;
-			}
-		
-		
+		{
+			GLSLANG_SOURCE_GLSL,
+			GLSLANG_STAGE_COMPUTE,
+			GLSLANG_CLIENT_VULKAN,
+			client_version,
+			GLSLANG_TARGET_SPV,
+			target_language_version,
+			code0,
+			450,
+			GLSLANG_NO_PROFILE,
+			1,
+			0,
+			GLSLANG_MSG_DEFAULT_BIT,
+			(const glslang_resource_t*)&default_resource,
+		};
 		//printf("%s\n", code0);
 		glslang_shader_t* shader = glslang_shader_create((const glslang_input_t*)&input);
 		const char* err;

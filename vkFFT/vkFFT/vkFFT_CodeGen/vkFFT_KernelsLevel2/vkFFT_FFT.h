@@ -73,10 +73,6 @@ static inline VkFFTResult shaderGen_FFT(VkFFTSpecializationConstantsLayout* sc, 
 	id++;
 	appendOutputLayoutVkFFT(sc, id);
 	id++;
-	if (sc->dynamicBatch){
-		appendCurrentBatchVkFFT(sc, id);
-		id++;	
-	}
 	if (sc->convolutionStep) {
 		appendKernelLayoutVkFFT(sc, id);
 		id++;
