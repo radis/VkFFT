@@ -969,7 +969,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 	if (inputLaunchConfiguration.indirectDispatch != 0) {
 		app->configuration.indirectDispatch = inputLaunchConfiguration.indirectDispatch;
 		app->configuration.indirectBuffer = inputLaunchConfiguration.indirectBuffer;
-		if (indirectBufferOffset){
+		if (app->configuration.indirectBufferOffset){
 			app->configuration.indirectBufferOffset = inputLaunchConfiguration.indirectBufferOffset;
 		}
 		else{
