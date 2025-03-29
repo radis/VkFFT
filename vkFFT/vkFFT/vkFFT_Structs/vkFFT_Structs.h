@@ -151,7 +151,7 @@ typedef struct {
 	VkBuffer* outputBuffer;//pointer to array of output buffers (or one buffer) used for write data to if isOutputFormatted is enabled
 	VkBuffer* kernel;//pointer to array of kernel buffers (or one buffer) used for read kernel data from if performConvolution is enabled
 	VkBuffer indirectBuffer; //buffer that contains workgroupsizes for indirect dispatch. Size hould be at least 4 x 4 bytes x the number of dispatches.
-	unsigned int* indirectHostPointer; // pointer to the array with the indirect workgroup sizes on the host side. During dispatch this array will be filled by VkFFT, which can later be updated by user. format us uint[4] = {x_size, y_size, z_size, id}, // with id the axis that contains the batch number (0=x, 1=y, 2=z), plus 10000 if the dispatch concerns an inverse FFT.	
+	unsigned int* indirectHostPointer; // pointer to the array with the indirect workgroup sizes on the host side. During dispatch this array will be filled by VkFFT, which can later be updated by user. format us uint[4] = {x_size, y_size, z_size, id}, with id the axis that contains the batch number (0=x, 1=y, 2=z), plus 10000 if the dispatch concerns an inverse FFT.	
 #elif(VKFFT_BACKEND==1)
 	void** buffer;//pointer to device buffer used for computations
 	void** tempBuffer;//needed if reorderFourStep is enabled to transpose the array. Same size as buffer. Default 0. Setting to non zero value enables manual user allocation
