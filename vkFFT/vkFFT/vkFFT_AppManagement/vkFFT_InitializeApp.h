@@ -969,7 +969,12 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 	if (inputLaunchConfiguration.indirectDispatch != 0) {
 		app->configuration.indirectDispatch = inputLaunchConfiguration.indirectDispatch;
 		app->configuration.indirectBuffer = inputLaunchConfiguration.indirectBuffer;
-		app->configuration.indirectBufferOffset = inputLaunchConfiguration.indirectBufferOffset;
+		if (indirectBufferOffset){
+			app->configuration.indirectBufferOffset = inputLaunchConfiguration.indirectBufferOffset;
+		}
+		else{
+			app->configuration.indirectBufferOffset = 0;
+		}
 		app->configuration.indirectHostPointer = inputLaunchConfiguration.indirectHostPointer;
 	}
 	resFFT = initializeBluesteinAutoPadding(app);

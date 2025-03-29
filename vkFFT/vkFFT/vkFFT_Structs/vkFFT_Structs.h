@@ -150,8 +150,8 @@ typedef struct {
 	VkBuffer* inputBuffer;//pointer to array of input buffers (or one buffer) used to read data from if isInputFormatted is enabled
 	VkBuffer* outputBuffer;//pointer to array of output buffers (or one buffer) used for write data to if isOutputFormatted is enabled
 	VkBuffer* kernel;//pointer to array of kernel buffers (or one buffer) used for read kernel data from if performConvolution is enabled
-	VkBuffer indirectBuffer;
-	unsigned int* indirectHostPointer;
+	VkBuffer indirectBuffer; //buffer that contains workgroupsizes for indirect dispatch. Size hould be at least 4 x 4 bytes x the number of dispatches.
+	unsigned int* indirectHostPointer; // pointer to the array with the indirect workgroup sizes on the host side. During dispatch this array will be filled by VkFFT, which can later be updated by user. format us uint[4] = {x_size, y_size, z_size, id}, // with id the axis that contains the batch number (0=x, 1=y, 2=z), plus 10000 if the dispatch concerns an inverse FFT.	
 #elif(VKFFT_BACKEND==1)
 	void** buffer;//pointer to device buffer used for computations
 	void** tempBuffer;//needed if reorderFourStep is enabled to transpose the array. Same size as buffer. Default 0. Setting to non zero value enables manual user allocation
@@ -188,7 +188,7 @@ typedef struct {
 	pfUINT inputBufferOffset;//specify if VkFFT has to offset the first element position inside the input buffer. In bytes. Default 0 
 	pfUINT outputBufferOffset;//specify if VkFFT has to offset the first element position inside the output buffer. In bytes. Default 0
 	pfUINT kernelOffset;//specify if VkFFT has to offset the first element position inside the kernel. In bytes. Default 0
-	pfUINT indirectBufferOffset;
+	pfUINT indirectBufferOffset; //specify if VkFFT has to offset the first element posigion inside the indirectBuffer. In bytes. Default 0
 	pfUINT specifyOffsetsAtLaunch;//specify if offsets will be selected with launch parameters VkFFTLaunchParams (0 - off, 1 - on). Default 0
 
 	//optional: (default 0 if not stated otherwise)
@@ -324,7 +324,7 @@ typedef struct {
 	MTL::CommandBuffer* commandBuffer;//Filled at app execution
 	MTL::ComputeCommandEncoder* commandEncoder;//Filled at app execution
 #endif
-    pfUINT indirectDispatch; //0 for direct, 1 for fwd indirect, 2 for inv indirec, 3 for both
+    pfUINT indirectDispatch; //0 for direct dispatch, 1 for fwd indirect, 2 for inv indirect, 3 for both indirect
 } VkFFTConfiguration;//parameters specified at plan creation
 
 typedef struct {
