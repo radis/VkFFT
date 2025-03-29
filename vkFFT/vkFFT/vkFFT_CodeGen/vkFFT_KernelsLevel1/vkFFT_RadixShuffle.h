@@ -156,7 +156,7 @@ static inline void appendRadixShuffleNonStrided(VkFFTSpecializationConstantsLayo
 								temp_int.data.i = i * stageSize->data.i;
 								PfAdd(sc, &sc->sdataID, &sc->inoutID, &temp_int);
 									
-								if ((stageSize->data.i <= sc->numSharedBanks / 2) && (sc->fftDim.data.i > sc->numSharedBanks / 2) && (sc->sharedStrideBankConflictFirstStages.data.i != sc->fftDim.data.i / sc->registerBoost) && ((sc->fftDim.data.i & (sc->fftDim.data.i - 1)) == 0) && (stageSize->data.i * stageRadix->data.i != sc->fftDim.data.i)) {
+								if ((stageSize->data.i <= sc->numSharedBanks / 2) && (sc->fftDim.data.i > sc->numSharedBanks / 2) && (sc->sharedStrideBankConflictFirstStages.data.i != sc->fftDim.data.i / sc->registerBoost) && ((sc->fftDim.data.i & (sc->fftDim.data.i - 1)) == 0) && (stageSize->data.i * stageRadix->data.i != sc->fftDim.data.i) && (!((sc->convolutionStep) && (sc->matrixConvolution > 1)))) {
 									if (sc->resolveBankConflictFirstStages == 0) {
 										sc->resolveBankConflictFirstStages = 1;
 										PfMov(sc, &sc->sharedStride, &sc->sharedStrideBankConflictFirstStages);

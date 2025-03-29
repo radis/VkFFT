@@ -32,10 +32,20 @@ static inline void appendKernelStart(VkFFTSpecializationConstantsLayout* sc, int
 	PfGetTypeFromCode(sc, sc->vecTypeCode, &vecType);
 	
 	PfContainer* inputMemoryType;
-	PfGetTypeFromCode(sc, sc->inputMemoryCode, &inputMemoryType);
+	if (sc->inputBufferSeparateComplexComponents)
+		PfGetTypeFromCode(sc, sc->floatTypeInputMemoryCode, &inputMemoryType);
+	else
+		PfGetTypeFromCode(sc, sc->inputMemoryCode, &inputMemoryType);
 	PfContainer* outputMemoryType;
-	PfGetTypeFromCode(sc, sc->outputMemoryCode, &outputMemoryType);
-
+	if (sc->outputBufferSeparateComplexComponents)
+		PfGetTypeFromCode(sc, sc->floatTypeOutputMemoryCode, &outputMemoryType);
+	else
+		PfGetTypeFromCode(sc, sc->outputMemoryCode, &outputMemoryType);
+	PfContainer* kernelMemoryType;
+	if (sc->kernelSeparateComplexComponents)
+		PfGetTypeFromCode(sc, sc->floatTypeKernelMemoryCode, &kernelMemoryType);
+	else
+		PfGetTypeFromCode(sc, sc->vecTypeKernelMemoryCode, &kernelMemoryType);
 	
 	PfContainer* uintType;
 	PfGetTypeFromCode(sc, sc->uintTypeCode, &uintType);
@@ -50,30 +60,45 @@ static inline void appendKernelStart(VkFFTSpecializationConstantsLayout* sc, int
 	sc->tempLen = sprintf(sc->tempStr, "extern __shared__ float shared[];\n");
 	PfAppendLine(sc);
 	
-	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ") VkFFT_main ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ") VkFFT_main (", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
 	PfAppendLine(sc);
-	sc->tempLen = sprintf(sc->tempStr, "(%s* inputs, %s* outputs", inputMemoryType->name, outputMemoryType->name);
-		
+	sc->tempLen = sprintf(sc->tempStr, "const %s* inputs", inputMemoryType->name);
 	PfAppendLine(sc);
-
-	if (sc->convolutionStep) {
-		sc->tempLen = sprintf(sc->tempStr, ", %s* kernel_obj", vecType->name);
+	if (sc->inputBufferSeparateComplexComponents){
+		sc->tempLen = sprintf(sc->tempStr, ", const %s* inputs_imag", inputMemoryType->name);
 		PfAppendLine(sc);
 	}
+	sc->tempLen = sprintf(sc->tempStr, ", %s* outputs", outputMemoryType->name);
+	PfAppendLine(sc);
+	if (sc->outputBufferSeparateComplexComponents){
+		sc->tempLen = sprintf(sc->tempStr, ", %s* outputs_imag", outputMemoryType->name);
+		PfAppendLine(sc);
+	}
+	if (sc->convolutionStep) {
+		if (sc->kernelSeparateComplexComponents){
+			sc->tempLen = sprintf(sc->tempStr, ", const %s* __restrict__ kernel_obj", kernelMemoryType->name);
+			PfAppendLine(sc);
+			sc->tempLen = sprintf(sc->tempStr, ", const %s* __restrict__ kernel_obj_imag", kernelMemoryType->name);
+			PfAppendLine(sc);
+		}else{
+			sc->tempLen = sprintf(sc->tempStr, ", const %s* __restrict__ kernel_obj", kernelMemoryType->name);
+			PfAppendLine(sc);
+		}
+	}
 	if (sc->LUT) {
-		sc->tempLen = sprintf(sc->tempStr, ", %s* twiddleLUT", vecType->name);
+		sc->tempLen = sprintf(sc->tempStr, ", const %s* __restrict__ twiddleLUT", vecType->name);
 		PfAppendLine(sc);
 	}
 	if (sc->raderUintLUT) {
-		sc->tempLen = sprintf(sc->tempStr, ", %s* g_pow", uintType32->name);
+		sc->tempLen = sprintf(sc->tempStr, ", const %s* __restrict__ g_pow", uintType32->name);
 		PfAppendLine(sc);
 	}
 	if (sc->BluesteinConvolutionStep) {
-		sc->tempLen = sprintf(sc->tempStr, ", %s* BluesteinConvolutionKernel", vecType->name);
+		sc->tempLen = sprintf(sc->tempStr, ", const %s* __restrict__ BluesteinConvolutionKernel", vecType->name);
 		PfAppendLine(sc);
 	}
 	if (sc->BluesteinPreMultiplication || sc->BluesteinPostMultiplication) {
-		sc->tempLen = sprintf(sc->tempStr, ", %s* BluesteinMultiplication", vecType->name);
+		sc->tempLen = sprintf(sc->tempStr, ", const %s* __restrict__ BluesteinMultiplication", vecType->name);
 		PfAppendLine(sc);
 	}
 	if (sc->pushConstantsStructSize > 0) {
@@ -118,14 +143,30 @@ static inline void appendKernelStart(VkFFTSpecializationConstantsLayout* sc, int
 		);
 	}
 	PfAppendLine(sc);
-	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __launch_bounds__(%" PRIi64 ") __global__ void VkFFT_main ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __launch_bounds__(%" PRIi64 ") __global__ void VkFFT_main (", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
 	PfAppendLine(sc);
-
-	sc->tempLen = sprintf(sc->tempStr, "(const Inputs<%s> inputs, Outputs<%s> outputs", inputMemoryType->name, outputMemoryType->name);
+	sc->tempLen = sprintf(sc->tempStr, "const Inputs<%s> inputs", inputMemoryType->name);
 	PfAppendLine(sc);
-	if (sc->convolutionStep) {
-		sc->tempLen = sprintf(sc->tempStr, ", const Inputs<%s> kernel_obj", vecType->name);
+	if (sc->inputBufferSeparateComplexComponents){
+		sc->tempLen = sprintf(sc->tempStr, ", const Inputs<%s> inputs_imag", inputMemoryType->name);
 		PfAppendLine(sc);
+	}
+	sc->tempLen = sprintf(sc->tempStr, ", Outputs<%s> outputs", outputMemoryType->name);
+	PfAppendLine(sc);
+	if (sc->outputBufferSeparateComplexComponents){
+		sc->tempLen = sprintf(sc->tempStr, ", Outputs<%s> outputs_imag", outputMemoryType->name);
+		PfAppendLine(sc);
+	}
+	if (sc->convolutionStep) {
+		if (sc->kernelSeparateComplexComponents){
+			sc->tempLen = sprintf(sc->tempStr, ", const Inputs<%s> kernel_obj", kernelMemoryType->name);
+			PfAppendLine(sc);
+			sc->tempLen = sprintf(sc->tempStr, ", const Inputs<%s> kernel_obj_imag", kernelMemoryType->name);
+			PfAppendLine(sc);
+		}else{
+			sc->tempLen = sprintf(sc->tempStr, ", const Inputs<%s> kernel_obj", kernelMemoryType->name);
+			PfAppendLine(sc);
+		}
 	}
 	if (sc->LUT) {
 		sc->tempLen = sprintf(sc->tempStr, ", const Inputs<%s> twiddleLUT", vecType->name);
@@ -152,36 +193,46 @@ static inline void appendKernelStart(VkFFTSpecializationConstantsLayout* sc, int
 	
 	appendSharedMemoryVkFFT(sc, (int)locType);
 #elif((VKFFT_BACKEND==3)||(VKFFT_BACKEND==4))
-	sc->tempLen = sprintf(sc->tempStr, "__kernel __attribute__((reqd_work_group_size(%" PRIi64 ", %" PRIi64 ", %" PRIi64 "))) void VkFFT_main ", sc->localSize[0].data.i, sc->localSize[1].data.i, sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "__kernel __attribute__((reqd_work_group_size(%" PRIi64 ", %" PRIi64 ", %" PRIi64 "))) void VkFFT_main (", sc->localSize[0].data.i, sc->localSize[1].data.i, sc->localSize[2].data.i);
 	PfAppendLine(sc);
-
-	sc->tempLen = sprintf(sc->tempStr, "(__global %s* inputs, __global %s* outputs", inputMemoryType->name, outputMemoryType->name);	
+	sc->tempLen = sprintf(sc->tempStr, "__global %s* inputs", inputMemoryType->name);
 	PfAppendLine(sc);
-	int args_id = 2;
-	if (sc->convolutionStep) {
-		sc->tempLen = sprintf(sc->tempStr, ", __global %s* kernel_obj", vecType->name);
+	if (sc->inputBufferSeparateComplexComponents){
+		sc->tempLen = sprintf(sc->tempStr, ", __global %s* inputs_imag", inputMemoryType->name);
 		PfAppendLine(sc);
-		args_id++;
+	}
+	sc->tempLen = sprintf(sc->tempStr, ", __global %s* outputs", outputMemoryType->name);
+	PfAppendLine(sc);
+	if (sc->outputBufferSeparateComplexComponents){
+		sc->tempLen = sprintf(sc->tempStr, ", __global %s* outputs_imag", outputMemoryType->name);
+		PfAppendLine(sc);
+	}
+	if (sc->convolutionStep) {
+		if (sc->kernelSeparateComplexComponents){
+			sc->tempLen = sprintf(sc->tempStr, ", __global %s* kernel_obj", kernelMemoryType->name);
+			PfAppendLine(sc);
+			sc->tempLen = sprintf(sc->tempStr, ", __global %s* kernel_obj_imag", kernelMemoryType->name);
+			PfAppendLine(sc);
+		}else{
+			sc->tempLen = sprintf(sc->tempStr, ", __global %s* kernel_obj", kernelMemoryType->name);
+			PfAppendLine(sc);
+		}
 	}
 	if (sc->LUT) {
 		sc->tempLen = sprintf(sc->tempStr, ", __global %s* twiddleLUT", vecType->name);
 		PfAppendLine(sc);
-		args_id++;
 	}
 	if (sc->raderUintLUT) {
 		sc->tempLen = sprintf(sc->tempStr, ", __global %s* g_pow", uintType32->name);
 		PfAppendLine(sc);
-		args_id++;
 	}
 	if (sc->BluesteinConvolutionStep) {
 		sc->tempLen = sprintf(sc->tempStr, ", __global %s* BluesteinConvolutionKernel", vecType->name);
 		PfAppendLine(sc);
-		args_id++;
 	}
 	if (sc->BluesteinPreMultiplication || sc->BluesteinPostMultiplication) {
 		sc->tempLen = sprintf(sc->tempStr, ", __global %s* BluesteinMultiplication", vecType->name);
 		PfAppendLine(sc);
-		args_id++;
 	}
 	if (sc->pushConstantsStructSize > 0) {
 		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
@@ -210,14 +261,36 @@ static inline void appendKernelStart(VkFFTSpecializationConstantsLayout* sc, int
 		sc->tempLen = sprintf(sc->tempStr, "threadgroup %s* sdata [[threadgroup(0)]], ", vecType->name);
 		PfAppendLine(sc);
 	}
-
-	sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", inputMemoryType->name, outputMemoryType->name);
+	int args_id = 0;
+	sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(%d)]]", inputMemoryType->name, args_id);
 	PfAppendLine(sc);
-	int args_id = 2;
-	if (sc->convolutionStep) {
-		sc->tempLen = sprintf(sc->tempStr, ", constant %s* kernel_obj[[buffer(%d)]]", vecType->name, args_id);
+	args_id++;
+	if (sc->inputBufferSeparateComplexComponents){
+		sc->tempLen = sprintf(sc->tempStr, ", device %s* inputs_imag[[buffer(%d)]]", inputMemoryType->name, args_id);
 		PfAppendLine(sc);
 		args_id++;
+	}
+	sc->tempLen = sprintf(sc->tempStr, ", device %s* outputs[[buffer(%d)]]", outputMemoryType->name, args_id);
+	PfAppendLine(sc);
+	args_id++;
+	if (sc->outputBufferSeparateComplexComponents){
+		sc->tempLen = sprintf(sc->tempStr, ", device %s* outputs_imag[[buffer(%d)]]", outputMemoryType->name, args_id);
+		PfAppendLine(sc);
+		args_id++;
+	}
+	if (sc->convolutionStep) {
+		if (sc->kernelSeparateComplexComponents){
+			sc->tempLen = sprintf(sc->tempStr, ", constant %s* kernel_obj[[buffer(%d)]]", kernelMemoryType->name, args_id);
+			PfAppendLine(sc);
+			args_id++;
+			sc->tempLen = sprintf(sc->tempStr, ", constant %s* kernel_obj_imag[[buffer(%d)]]", kernelMemoryType->name, args_id);
+			PfAppendLine(sc);
+			args_id++;
+		}else{
+			sc->tempLen = sprintf(sc->tempStr, ", constant %s* kernel_obj[[buffer(%d)]]", kernelMemoryType->name, args_id);
+			PfAppendLine(sc);
+			args_id++;
+		}
 	}
 	if (sc->LUT) {
 		sc->tempLen = sprintf(sc->tempStr, ", constant %s* twiddleLUT[[buffer(%d)]]", vecType->name, args_id);
@@ -242,7 +315,6 @@ static inline void appendKernelStart(VkFFTSpecializationConstantsLayout* sc, int
 	if (sc->pushConstantsStructSize > 0) {
 		sc->tempLen = sprintf(sc->tempStr, ", constant PushConsts& consts[[buffer(%d)]]", args_id);
 		PfAppendLine(sc);
-		
 		args_id++;
 	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
@@ -261,9 +333,15 @@ static inline void appendKernelStart_R2C(VkFFTSpecializationConstantsLayout* sc,
 	PfGetTypeFromCode(sc, sc->vecTypeCode, &vecType);
 	
 	PfContainer* inputMemoryType;
-	PfGetTypeFromCode(sc, sc->inputMemoryCode, &inputMemoryType);
+	if (sc->inputBufferSeparateComplexComponents)
+		PfGetTypeFromCode(sc, sc->floatTypeInputMemoryCode, &inputMemoryType);
+	else
+		PfGetTypeFromCode(sc, sc->inputMemoryCode, &inputMemoryType);
 	PfContainer* outputMemoryType;
-	PfGetTypeFromCode(sc, sc->outputMemoryCode, &outputMemoryType);
+	if (sc->outputBufferSeparateComplexComponents)
+		PfGetTypeFromCode(sc, sc->floatTypeOutputMemoryCode, &outputMemoryType);
+	else
+		PfGetTypeFromCode(sc, sc->outputMemoryCode, &outputMemoryType);
 
 	PfContainer* uintType;
 	PfGetTypeFromCode(sc, sc->uintTypeCode, &uintType);
@@ -276,11 +354,21 @@ static inline void appendKernelStart_R2C(VkFFTSpecializationConstantsLayout* sc,
 	
 #elif(VKFFT_BACKEND==1)
 	
-	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ") VkFFT_main_R2C ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ") VkFFT_main_R2C (", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
 	PfAppendLine(sc);
 
-	sc->tempLen = sprintf(sc->tempStr, "(%s* inputs, %s* outputs", inputMemoryType->name, outputMemoryType->name);
+	sc->tempLen = sprintf(sc->tempStr, "%s* inputs", inputMemoryType->name);
 	PfAppendLine(sc);
+	if (sc->inputBufferSeparateComplexComponents){
+		sc->tempLen = sprintf(sc->tempStr, ", %s* inputs_imag", inputMemoryType->name);
+		PfAppendLine(sc);
+	}
+	sc->tempLen = sprintf(sc->tempStr, ", %s* outputs", outputMemoryType->name);
+	PfAppendLine(sc);
+	if (sc->outputBufferSeparateComplexComponents){
+		sc->tempLen = sprintf(sc->tempStr, ", %s* outputs_imag", outputMemoryType->name);
+		PfAppendLine(sc);
+	}
 
 	if (sc->LUT) {
 		sc->tempLen = sprintf(sc->tempStr, ", %s* twiddleLUT", vecType->name);
@@ -324,12 +412,22 @@ static inline void appendKernelStart_R2C(VkFFTSpecializationConstantsLayout* sc,
 		);
 	}
 	PfAppendLine(sc);
-	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __launch_bounds__(%" PRIi64 ") __global__ void VkFFT_main_R2C ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __launch_bounds__(%" PRIi64 ") __global__ void VkFFT_main_R2C (", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
 	PfAppendLine(sc);
 	
-	sc->tempLen = sprintf(sc->tempStr, "(const Inputs<%s> inputs, Outputs<%s> outputs", inputMemoryType->name, outputMemoryType->name);
+	sc->tempLen = sprintf(sc->tempStr, "const Inputs<%s> inputs", inputMemoryType->name);
 	PfAppendLine(sc);
-	
+	if (sc->inputBufferSeparateComplexComponents){
+		sc->tempLen = sprintf(sc->tempStr, ", const Inputs<%s> inputs_imag", inputMemoryType->name);
+		PfAppendLine(sc);
+	}
+	sc->tempLen = sprintf(sc->tempStr, ", Outputs<%s> outputs", outputMemoryType->name);
+	PfAppendLine(sc);
+	if (sc->outputBufferSeparateComplexComponents){
+		sc->tempLen = sprintf(sc->tempStr, ", Outputs<%s> outputs_imag", outputMemoryType->name);
+		PfAppendLine(sc);
+	}
+
 	if (sc->LUT) {
 		sc->tempLen = sprintf(sc->tempStr, ", const Inputs<%s> twiddleLUT", vecType->name);
 		PfAppendLine(sc);
@@ -342,15 +440,23 @@ static inline void appendKernelStart_R2C(VkFFTSpecializationConstantsLayout* sc,
 	PfAppendLine(sc);
 	
 #elif((VKFFT_BACKEND==3)||(VKFFT_BACKEND==4))
-	sc->tempLen = sprintf(sc->tempStr, "__kernel __attribute__((reqd_work_group_size(%" PRIi64 ", %" PRIi64 ", %" PRIi64 "))) void VkFFT_main_R2C ", sc->localSize[0].data.i, sc->localSize[1].data.i, sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "__kernel __attribute__((reqd_work_group_size(%" PRIi64 ", %" PRIi64 ", %" PRIi64 "))) void VkFFT_main_R2C (", sc->localSize[0].data.i, sc->localSize[1].data.i, sc->localSize[2].data.i);
 	PfAppendLine(sc);
-	sc->tempLen = sprintf(sc->tempStr, "(__global %s* inputs, __global %s* outputs", inputMemoryType->name, outputMemoryType->name);
+	sc->tempLen = sprintf(sc->tempStr, "__global %s* inputs", inputMemoryType->name);
 	PfAppendLine(sc);
-	int args_id = 2;
+	if (sc->inputBufferSeparateComplexComponents){
+		sc->tempLen = sprintf(sc->tempStr, ", __global %s* inputs_imag", inputMemoryType->name);
+		PfAppendLine(sc);
+	}
+	sc->tempLen = sprintf(sc->tempStr, ", __global %s* outputs", outputMemoryType->name);
+	PfAppendLine(sc);
+	if (sc->outputBufferSeparateComplexComponents){
+		sc->tempLen = sprintf(sc->tempStr, ", __global %s* outputs_imag", outputMemoryType->name);
+		PfAppendLine(sc);
+	}
 	if (sc->LUT) {
 		sc->tempLen = sprintf(sc->tempStr, ", __global %s* twiddleLUT", vecType->name);
 		PfAppendLine(sc);
-		args_id++;
 	}
 	if (sc->pushConstantsStructSize > 0) {
 		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
@@ -372,9 +478,23 @@ static inline void appendKernelStart_R2C(VkFFTSpecializationConstantsLayout* sc,
 	sc->tempLen = sprintf(sc->tempStr, "%s3 thread_position_in_threadgroup [[thread_position_in_threadgroup]], ", uintType->name);
 	PfAppendLine(sc);
 
-	sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", inputMemoryType->name, outputMemoryType->name);
+	int args_id = 0;
+	sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(%d)]]", inputMemoryType->name, args_id);
 	PfAppendLine(sc);
-	int args_id = 2;
+	args_id++;
+	if (sc->inputBufferSeparateComplexComponents){
+		sc->tempLen = sprintf(sc->tempStr, ", device %s* inputs_imag[[buffer(%d)]]", inputMemoryType->name, args_id);
+		PfAppendLine(sc);
+		args_id++;
+	}
+	sc->tempLen = sprintf(sc->tempStr, ", device %s* outputs[[buffer(%d)]]", outputMemoryType->name, args_id);
+	PfAppendLine(sc);
+	args_id++;
+	if (sc->outputBufferSeparateComplexComponents){
+		sc->tempLen = sprintf(sc->tempStr, ", device %s* outputs_imag[[buffer(%d)]]", outputMemoryType->name, args_id);
+		PfAppendLine(sc);
+		args_id++;
+	}
 	
 	if (sc->LUT) {
 		sc->tempLen = sprintf(sc->tempStr, ", constant %s* twiddleLUT[[buffer(%d)]]", vecType->name, args_id);

@@ -378,16 +378,28 @@ static inline VkFFTResult initParametersAPI(VkFFTApplication* app, VkFFTSpeciali
 		sc->inputOffset.type = 100 + sc->uintTypeCode;
 		PfAllocateContainerFlexible(sc, &sc->inputOffset, 50);
 		sprintf(sc->inputOffset.name, "inputOffset");
+
+		sc->inputOffsetImaginary.type = 100 + sc->uintTypeCode;
+		PfAllocateContainerFlexible(sc, &sc->inputOffsetImaginary, 50);
+		sprintf(sc->inputOffsetImaginary.name, "inputOffsetImaginary");
 	}
 	if (sc->performPostCompilationOutputOffset) {
 		sc->outputOffset.type = 100 + sc->uintTypeCode;
 		PfAllocateContainerFlexible(sc, &sc->outputOffset, 50);
 		sprintf(sc->outputOffset.name, "outputOffset");
+
+		sc->outputOffsetImaginary.type = 100 + sc->uintTypeCode;
+		PfAllocateContainerFlexible(sc, &sc->outputOffsetImaginary, 50);
+		sprintf(sc->outputOffsetImaginary.name, "outputOffsetImaginary");
 	}
 	if (sc->performPostCompilationKernelOffset) {
 		sc->kernelOffset.type = 100 + sc->uintTypeCode;
 		PfAllocateContainerFlexible(sc, &sc->kernelOffset, 50);
 		sprintf(sc->kernelOffset.name, "kernelOffset");
+
+		sc->kernelOffsetImaginary.type = 100 + sc->uintTypeCode;
+		PfAllocateContainerFlexible(sc, &sc->kernelOffsetImaginary, 50);
+		sprintf(sc->kernelOffsetImaginary.name, "kernelOffsetImaginary");
 	}
 #if(VKFFT_BACKEND==0)
 	sprintf(sc->inputsStruct.name, "inputs");
@@ -623,12 +635,15 @@ static inline VkFFTResult freeParametersAPI(VkFFTApplication* app, VkFFTSpeciali
 	}
 	if (sc->performPostCompilationInputOffset) {
 		PfDeallocateContainer(sc, &sc->inputOffset);
+		PfDeallocateContainer(sc, &sc->inputOffsetImaginary);
 	}
 	if (sc->performPostCompilationOutputOffset) {
 		PfDeallocateContainer(sc, &sc->outputOffset);
+		PfDeallocateContainer(sc, &sc->outputOffsetImaginary);
 	}
 	if (sc->performPostCompilationKernelOffset) {
 		PfDeallocateContainer(sc, &sc->kernelOffset);
+		PfDeallocateContainer(sc, &sc->kernelOffsetImaginary);
 	}
 	return res;
 }

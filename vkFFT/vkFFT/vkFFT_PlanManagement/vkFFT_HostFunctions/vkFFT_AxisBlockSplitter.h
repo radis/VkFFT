@@ -22,7 +22,70 @@
 #ifndef VKFFT_AXISBLOCKSPLITTER_H
 #define VKFFT_AXISBLOCKSPLITTER_H
 #include "vkFFT/vkFFT_Structs/vkFFT_Structs.h"
+static inline VkFFTResult VkFFTEstimateGroupBatch(VkFFTApplication* app, pfUINT complexSize, pfUINT fftDim, pfUINT numAxisUploads, pfUINT axis_id, pfUINT axis_upload_id, pfUINT allowedSharedMemory, pfUINT allowedSharedMemoryPow2, pfUINT reorderFourStep , pfUINT* groupedBatchResult) {
+	pfUINT maxBatchCoalesced = app->configuration.coalescedMemory / complexSize;
+	pfUINT groupedBatch = maxBatchCoalesced;
 
+	pfUINT maxSequenceLengthSharedMemory = allowedSharedMemory / complexSize;
+	pfUINT maxSequenceLengthSharedMemoryPow2 = allowedSharedMemoryPow2 / complexSize;
+	pfUINT maxSingleSizeStrided = (app->configuration.coalescedMemory > complexSize) ? allowedSharedMemory / (app->configuration.coalescedMemory) : allowedSharedMemory / complexSize;
+	pfUINT maxSingleSizeStridedPow2 = (app->configuration.coalescedMemory > complexSize) ? allowedSharedMemoryPow2 / (app->configuration.coalescedMemory) : allowedSharedMemoryPow2 / complexSize;
+	if (((numAxisUploads == 1) && (axis_id == 0)) || ((axis_id == 0) && (!reorderFourStep) && (axis_upload_id == 0))) {
+		groupedBatch = (maxSequenceLengthSharedMemory / fftDim > groupedBatch) ? maxSequenceLengthSharedMemory / fftDim : groupedBatch;
+	}
+	else {
+		groupedBatch = (maxSingleSizeStrided / fftDim > 1) ? maxSingleSizeStrided / fftDim * groupedBatch : groupedBatch;
+	}
+	if (app->configuration.vendorID == 0x10DE) {
+		if (numAxisUploads == 2) {
+			if ((axis_upload_id > 0) || (fftDim <= 512)) {
+				if ((pfUINT)(fftDim * (64 / complexSize)) <= maxSequenceLengthSharedMemory) {
+					groupedBatch = 64 / complexSize;
+					maxBatchCoalesced = 64 / complexSize;
+				}
+				if ((pfUINT)(fftDim * (128 / complexSize)) <= maxSequenceLengthSharedMemory) {
+					groupedBatch = 128 / complexSize;
+					maxBatchCoalesced = 128 / complexSize;
+				}
+			}
+		}
+		//#endif
+		if (numAxisUploads == 3) {
+			if ((pfUINT)(fftDim * (64 / complexSize)) <= maxSequenceLengthSharedMemory) {
+				groupedBatch = 64 / complexSize;
+				maxBatchCoalesced = 64 / complexSize;
+			}
+			if ((pfUINT)(fftDim * (128 / complexSize)) <= maxSequenceLengthSharedMemory) {
+				groupedBatch = 128 / complexSize;
+				maxBatchCoalesced = 128 / complexSize;
+			}
+		}
+	}
+	else {
+		if ((numAxisUploads == 2) && (axis_upload_id == 0) && (fftDim * maxBatchCoalesced <= maxSequenceLengthSharedMemory)) {
+			groupedBatch = (pfUINT)pfceil(groupedBatch / 2.0);
+		}
+		//#endif
+		if ((numAxisUploads == 3) && (axis_upload_id == 0) && ((pfUINT)fftDim < maxSequenceLengthSharedMemory / (2 * complexSize))) {
+			groupedBatch = (pfUINT)pfceil(groupedBatch / 2.0);
+		}
+	}
+	if (groupedBatch < maxBatchCoalesced) groupedBatch = maxBatchCoalesced;
+	groupedBatch = (groupedBatch / maxBatchCoalesced) * maxBatchCoalesced;
+	//half bandiwdth technique
+	if (!((axis_id == 0) && (numAxisUploads == 1)) && !((axis_id == 0) && (axis_upload_id == 0) && (!reorderFourStep)) && ((pfUINT)fftDim > maxSingleSizeStrided)) {
+		groupedBatch = maxSequenceLengthSharedMemory / fftDim;
+		if (groupedBatch == 0) groupedBatch = 1;
+	}
+
+	if ((app->configuration.halfThreads) && (groupedBatch * fftDim * complexSize >= app->configuration.sharedMemorySize))
+		groupedBatch = (pfUINT)pfceil(groupedBatch / 2.0);
+	if (groupedBatch > app->configuration.warpSize) groupedBatch = (groupedBatch / app->configuration.warpSize) * app->configuration.warpSize;
+	if (groupedBatch > 2 * maxBatchCoalesced) groupedBatch = (groupedBatch / (2 * maxBatchCoalesced)) * (2 * maxBatchCoalesced);
+	if (groupedBatch > 4 * maxBatchCoalesced) groupedBatch = (groupedBatch / (4 * maxBatchCoalesced)) * (4 * maxBatchCoalesced);
+	groupedBatchResult[0] = groupedBatch;
+	return VKFFT_SUCCESS;
+}
 static inline VkFFTResult VkFFTSplitAxisBlock(VkFFTApplication* app, VkFFTPlan* FFTPlan, VkFFTAxis* axis, pfUINT axis_id, pfUINT axis_upload_id, pfUINT allowedSharedMemory, pfUINT allowedSharedMemoryPow2) {
 	pfUINT maxBatchCoalesced = app->configuration.coalescedMemory / axis->specializationConstants.complexSize;
 	axis->groupedBatch = maxBatchCoalesced;
@@ -44,7 +107,7 @@ static inline VkFFTResult VkFFTSplitAxisBlock(VkFFTApplication* app, VkFFTPlan* 
 		axis->specializationConstants.axisSwapped = 0;
 		pfUINT r2cmult = (axis->specializationConstants.mergeSequencesR2C) ? 2 : 1;
 		if (axis_id == 0) {
-			if (axis_upload_id == 0) {
+			if ((axis_upload_id == 0) && (!(((axis->specializationConstants.reorderFourStep == 2) || ((axis->specializationConstants.reorderFourStep == 1) && (axis->specializationConstants.disableTransposeSharedReorderFourStepForWrite))) && (axis->specializationConstants.numAxisUploads > 1)))) {
 				axis->axisBlock[0] = (((pfUINT)pfceil(axis->specializationConstants.fftDim.data.i / (double)axis->specializationConstants.min_registers_per_thread)) / axis->specializationConstants.registerBoost > 1) ? ((pfUINT)pfceil(axis->specializationConstants.fftDim.data.i / (double)axis->specializationConstants.min_registers_per_thread)) / axis->specializationConstants.registerBoost : 1;
 				if (axis->specializationConstants.useRaderMult) {
 					pfUINT locMaxBatchCoalesced = ((axis_id == 0) && (((axis_upload_id == 0) && ((!app->configuration.reorderFourStep) || (app->useBluesteinFFT[axis_id]))) || (axis->specializationConstants.numAxisUploads == 1))) ? 1 : maxBatchCoalesced;
@@ -77,6 +140,22 @@ static inline VkFFTResult VkFFTSplitAxisBlock(VkFFTApplication* app, VkFFTPlan* 
 				}
 				while ((axis->axisBlock[1] * (axis->specializationConstants.fftDim.data.i / axis->specializationConstants.registerBoost)) > maxSequenceLengthSharedMemory) axis->axisBlock[1] /= 2;
 				
+				pfUINT additionalR2Cshared = 0;
+				if ((axis->specializationConstants.performR2C || ((axis->specializationConstants.performDCT == 2) || (axis->specializationConstants.performDST == 2) || (axis->specializationConstants.performDCT == 3) || (axis->specializationConstants.performDST == 3) || (((axis->specializationConstants.performDCT == 4) || (axis->specializationConstants.performDST == 4)) && ((axis->specializationConstants.fft_dim_full.data.i % 2) != 0)))) && (axis->specializationConstants.axis_id == 0) && (!axis->specializationConstants.performR2CmultiUpload) && (!axis->specializationConstants.performR2RmultiUpload)) {
+					additionalR2Cshared = ((axis->specializationConstants.fft_dim_full.data.i % 2) == 0) ? 2 : 1;
+					if ((axis->specializationConstants.performDCT == 2) || (axis->specializationConstants.performDST == 2) || (axis->specializationConstants.performDCT == 3) || (axis->specializationConstants.performDST == 3) || (((axis->specializationConstants.performDCT == 4) || (axis->specializationConstants.performDST == 4)) && ((axis->specializationConstants.fft_dim_full.data.i % 2) != 0))) additionalR2Cshared = 1;
+				}
+				if ((axis->specializationConstants.mergeSequencesR2C) && ((!axis->specializationConstants.performR2CmultiUpload) && (!axis->specializationConstants.performR2RmultiUpload) && ((axis->specializationConstants.fft_dim_full.data.i + additionalR2Cshared) <= maxSequenceLengthSharedMemory) && (FFTPlan->actualFFTSizePerAxis[axis_id][1] > 1) && ((FFTPlan->actualPerformR2CPerAxis[axis_id]) || ((((axis->specializationConstants.performDCT == 3) || (axis->specializationConstants.performDST == 3)) || ((axis->specializationConstants.performDCT == 2) || (axis->specializationConstants.performDST == 2)) || ((axis->specializationConstants.performDCT == 1) || (axis->specializationConstants.performDST == 1)) || (((axis->specializationConstants.performDCT == 4) || (axis->specializationConstants.performDST == 4)) && ((app->configuration.size[axis_id] % 2) != 0))) && (axis_id == 0))))) {
+					if (((axis->specializationConstants.fft_dim_full.data.i + additionalR2Cshared) * axis->axisBlock[1] * axis->specializationConstants.complexSize) > (app->configuration.sharedMemorySize - axis->specializationConstants.additionalRaderSharedSize.data.i * axis->specializationConstants.complexSize)) {
+						if (axis->axisBlock[1] > maxBatchCoalesced) {
+							axis->axisBlock[1] = maxBatchCoalesced;
+						}
+						else {
+							axis->specializationConstants.mergeSequencesR2C = 0;
+						}
+					}
+				}
+	
 				axis->groupedBatch = axis->axisBlock[1];
 				if (((axis->specializationConstants.fftDim.data.i % 2 == 0) || (axis->axisBlock[0] < app->configuration.numSharedBanks / 4)) && (!(((!axis->specializationConstants.reorderFourStep) || (axis->specializationConstants.useBluesteinFFT)) && (FFTPlan->numAxisUploads[0] > 1))) && (axis->axisBlock[1] > 1) && (axis->axisBlock[1] * axis->specializationConstants.fftDim.data.i < maxSequenceLengthSharedMemory) && (!((app->configuration.performZeropadding[0] || app->configuration.performZeropadding[1] || app->configuration.performZeropadding[2])))) {
 					/*#if (VKFFT_BACKEND==0)
@@ -124,13 +203,11 @@ static inline VkFFTResult VkFFTSplitAxisBlock(VkFFTApplication* app, VkFFTPlan* 
 				pfUINT scale = app->configuration.aimThreads / axis->axisBlock[1] / axis->groupedBatch;
 				if ((scale > 1) && ((axis->specializationConstants.fftDim.data.i * axis->groupedBatch * scale <= maxSequenceLengthSharedMemory))) axis->groupedBatch *= scale;
 
-				axis->axisBlock[0] = ((pfUINT)axis->specializationConstants.stageStartSize.data.i > axis->groupedBatch) ? axis->groupedBatch : (pfUINT)axis->specializationConstants.stageStartSize.data.i;
-				if (app->configuration.vendorID == 0x10DE) {
-					while ((axis->axisBlock[1] * axis->axisBlock[0] >= 2 * app->configuration.aimThreads) && (axis->axisBlock[0] > maxBatchCoalesced)) {
-						axis->axisBlock[0] /= 2;
-						if (axis->axisBlock[0] < maxBatchCoalesced) axis->axisBlock[0] = maxBatchCoalesced;
-					}
-				}
+				if (axis->specializationConstants.reorderFourStep == 2)
+					axis->axisBlock[0] = ((pfUINT)(axis->specializationConstants.fft_dim_full.data.i / axis->specializationConstants.fftDim.data.i) > axis->groupedBatch) ? axis->groupedBatch : (axis->specializationConstants.fft_dim_full.data.i / axis->specializationConstants.fftDim.data.i);
+				else
+					axis->axisBlock[0] = ((pfUINT)axis->specializationConstants.stageStartSize.data.i > axis->groupedBatch) ? axis->groupedBatch : axis->specializationConstants.stageStartSize.data.i;
+				
 				if (axis->axisBlock[0] > app->configuration.maxComputeWorkGroupSize[0]) axis->axisBlock[0] = app->configuration.maxComputeWorkGroupSize[0];
 				if (axis->axisBlock[0] * axis->axisBlock[1] > maxThreadNum) {
 					for (pfUINT i = 1; i <= axis->axisBlock[0]; i++) {
@@ -256,13 +333,19 @@ static inline VkFFTResult VkFFTSplitAxisBlock(VkFFTApplication* app, VkFFTPlan* 
 	if (axis->groupedBatch > app->configuration.warpSize) axis->groupedBatch = (axis->groupedBatch / app->configuration.warpSize) * app->configuration.warpSize;
 	if (axis->groupedBatch > 2 * maxBatchCoalesced) axis->groupedBatch = (axis->groupedBatch / (2 * maxBatchCoalesced)) * (2 * maxBatchCoalesced);
 	if (axis->groupedBatch > 4 * maxBatchCoalesced) axis->groupedBatch = (axis->groupedBatch / (4 * maxBatchCoalesced)) * (4 * maxBatchCoalesced);
+
+	pfUINT numRHS = app->configuration.coordinateFeatures * app->configuration.numberBatches;
+    for (int p = 0; p <app->configuration.FFTdim; p++){
+        numRHS*= app->configuration.size[p];;
+    }
+	numRHS /= axis->specializationConstants.fftDim.data.i;
 	//pfUINT maxThreadNum = (axis_id) ? (maxSingleSizeStrided * app->configuration.coalescedMemory / axis->specializationConstants.complexSize) / (axis->specializationConstants.min_registers_per_thread * axis->specializationConstants.registerBoost) : maxSequenceLengthSharedMemory / (axis->specializationConstants.min_registers_per_thread * axis->specializationConstants.registerBoost);
 	//if (maxThreadNum > app->configuration.maxThreadsNum) maxThreadNum = app->configuration.maxThreadsNum;
 	pfUINT maxThreadNum = app->configuration.maxThreadsNum;
 	axis->specializationConstants.axisSwapped = 0;
 	pfUINT r2cmult = (axis->specializationConstants.mergeSequencesR2C) ? 2 : 1;
 	if (axis_id == 0) {
-		if (axis_upload_id == 0) {
+		if ((axis_upload_id == 0) && (!(((axis->specializationConstants.reorderFourStep == 2) || ((axis->specializationConstants.reorderFourStep == 1) && (axis->specializationConstants.disableTransposeSharedReorderFourStepForWrite))) && (axis->specializationConstants.numAxisUploads > 1)))) {
 			axis->axisBlock[0] = (((pfUINT)pfceil(axis->specializationConstants.fftDim.data.i / (double)axis->specializationConstants.min_registers_per_thread)) / axis->specializationConstants.registerBoost > 1) ? ((pfUINT)pfceil(axis->specializationConstants.fftDim.data.i / (double)axis->specializationConstants.min_registers_per_thread)) / axis->specializationConstants.registerBoost : 1;
 			if (axis->specializationConstants.useRaderMult) {
 				pfUINT locMaxBatchCoalesced = ((axis_id == 0) && (((axis_upload_id == 0) && ((!app->configuration.reorderFourStep) || (app->useBluesteinFFT[axis_id]))) || (axis->specializationConstants.numAxisUploads == 1))) ? 1 : maxBatchCoalesced;
@@ -287,6 +370,8 @@ static inline VkFFTResult VkFFTSplitAxisBlock(VkFFTApplication* app, VkFFTPlan* 
 			if (axis->specializationConstants.useRaderFFT) {
 				if (axis->axisBlock[0] < axis->specializationConstants.minRaderFFTThreadNum) axis->axisBlock[0] = axis->specializationConstants.minRaderFFTThreadNum;
 			}
+
+			if (axis->axisBlock[0] * axis->groupedBatch < app->configuration.warpSize) axis->groupedBatch = app->configuration.warpSize/axis->axisBlock[0];
 			if (axis->axisBlock[0] > maxThreadNum) axis->axisBlock[0] = maxThreadNum;
 			if (axis->axisBlock[0] > app->configuration.maxComputeWorkGroupSize[0]) axis->axisBlock[0] = app->configuration.maxComputeWorkGroupSize[0];
 			if (axis->specializationConstants.reorderFourStep && (FFTPlan->numAxisUploads[axis_id] > 1))
@@ -295,7 +380,9 @@ static inline VkFFTResult VkFFTSplitAxisBlock(VkFFTApplication* app, VkFFTPlan* 
 				//axis->axisBlock[1] = (axis->axisBlock[0] < app->configuration.warpSize) ? app->configuration.warpSize / axis->axisBlock[0] : 1;
 				pfUINT estimate_batch = (((axis->axisBlock[0] / app->configuration.warpSize) == 1) && ((axis->axisBlock[0] / (double)app->configuration.warpSize) < 1.5)) ? app->configuration.aimThreads / app->configuration.warpSize : app->configuration.aimThreads / axis->axisBlock[0];
 				if (estimate_batch == 0) estimate_batch = 1;
-				axis->axisBlock[1] = ((axis->axisBlock[0] < app->configuration.aimThreads) && ((axis->axisBlock[0] < app->configuration.warpSize) || (axis->specializationConstants.useRader))) ? estimate_batch : 1;
+				if ((app->configuration.vendorID == 0x10DE) && (estimate_batch == 2)) estimate_batch = 1;
+				//if (estimate_batch < maxBatchCoalesced) estimate_batch = maxBatchCoalesced;
+				axis->axisBlock[1] = (axis->axisBlock[0] < app->configuration.aimThreads) ? estimate_batch : 1;
 			}
 
 			pfUINT currentAxisBlock1 = axis->axisBlock[1];
@@ -305,10 +392,11 @@ static inline VkFFTResult VkFFTSplitAxisBlock(VkFFTApplication* app, VkFFTPlan* 
 					i = 2 * currentAxisBlock1;
 				}
 			}
-			if (((axis->specializationConstants.fftDim.data.i % 2 == 0) || (axis->axisBlock[0] < app->configuration.numSharedBanks / 4)) && (!(((!axis->specializationConstants.reorderFourStep) || (axis->specializationConstants.useBluesteinFFT)) && (FFTPlan->numAxisUploads[0] > 1))) && (axis->axisBlock[1] > 1) && (axis->axisBlock[1] * axis->specializationConstants.fftDim.data.i < maxSequenceLengthSharedMemoryPow2) && (!((app->configuration.performZeropadding[0] || app->configuration.performZeropadding[1] || app->configuration.performZeropadding[2])))) {
+			/*if ((!axis->specializationConstants.useRaderMult) && (((axis->axisBlock[0] & (axis->axisBlock[0]-1))) || (axis->axisBlock[0] <= app->configuration.numSharedBanks / 2)) && (!(((!axis->specializationConstants.reorderFourStep) || (axis->specializationConstants.useBluesteinFFT)) && (FFTPlan->numAxisUploads[0] > 1))) && (axis->axisBlock[1] > 1) && (axis->axisBlock[1] * axis->specializationConstants.fftDim.data.i < maxSequenceLengthSharedMemory) && (!((app->configuration.performZeropadding[0] || app->configuration.performZeropadding[1] || app->configuration.performZeropadding[2])))) {
 				//we plan to swap - this reduces bank conflicts
 				axis->axisBlock[1] = (pfUINT)pow(2, (pfUINT)pfceil(log2((double)axis->axisBlock[1])));
-			}
+			}*/
+			if (app->configuration.vendorID == 0x10DE) axis->axisBlock[1] = (pfUINT)pow(2, (pfUINT)pfceil(log2((double)axis->axisBlock[1])));
 			if ((FFTPlan->numAxisUploads[0] > 1) && ((pfUINT)pfceil(FFTPlan->actualFFTSizePerAxis[axis_id][0] / axis->specializationConstants.fftDim.data.i) < axis->axisBlock[1])) axis->axisBlock[1] = (pfUINT)pfceil(FFTPlan->actualFFTSizePerAxis[axis_id][0] / axis->specializationConstants.fftDim.data.i);
 			if ((axis->specializationConstants.mergeSequencesR2C != 0) && (axis->specializationConstants.fftDim.data.i * axis->axisBlock[1] >= maxSequenceLengthSharedMemory)) {
 				axis->specializationConstants.mergeSequencesR2C = 0;
@@ -327,12 +415,7 @@ static inline VkFFTResult VkFFTSplitAxisBlock(VkFFTApplication* app, VkFFTPlan* 
 				r2cmult = 1;
 			}
 			if ((FFTPlan->numAxisUploads[0] == 1) && ((pfUINT)pfceil(FFTPlan->actualFFTSizePerAxis[axis_id][1] / (double)r2cmult) < axis->axisBlock[1])) axis->axisBlock[1] = (pfUINT)pfceil(FFTPlan->actualFFTSizePerAxis[axis_id][1] / (double)r2cmult);
-			if (app->configuration.vendorID == 0x10DE) {
-				while ((axis->axisBlock[1] * axis->axisBlock[0] >= 2 * app->configuration.aimThreads) && (axis->axisBlock[1] > maxBatchCoalesced)) {
-					axis->axisBlock[1] /= 2;
-					if (axis->axisBlock[1] < maxBatchCoalesced) axis->axisBlock[1] = maxBatchCoalesced;
-				}
-			}
+			
 			if (axis->axisBlock[1] > app->configuration.maxComputeWorkGroupSize[1]) axis->axisBlock[1] = app->configuration.maxComputeWorkGroupSize[1];
 			//if (axis->axisBlock[0] * axis->axisBlock[1] > app->configuration.maxThreadsNum) axis->axisBlock[1] /= 2;
 			if (axis->axisBlock[0] * axis->axisBlock[1] > maxThreadNum) {
@@ -346,8 +429,23 @@ static inline VkFFTResult VkFFTSplitAxisBlock(VkFFTApplication* app, VkFFTPlan* 
 				}
 			}
 			while ((axis->axisBlock[1] * (axis->specializationConstants.fftDim.data.i / axis->specializationConstants.registerBoost)) > maxSequenceLengthSharedMemory) axis->axisBlock[1] /= 2;
+			pfUINT additionalR2Cshared = 0;
+			if ((axis->specializationConstants.performR2C || ((axis->specializationConstants.performDCT == 2) || (axis->specializationConstants.performDST == 2) || (axis->specializationConstants.performDCT == 3) || (axis->specializationConstants.performDST == 3) || (((axis->specializationConstants.performDCT == 4) || (axis->specializationConstants.performDST == 4)) && ((axis->specializationConstants.fft_dim_full.data.i % 2) != 0)))) && (axis->specializationConstants.axis_id == 0) && (!axis->specializationConstants.performR2CmultiUpload) && (!axis->specializationConstants.performR2RmultiUpload)) {
+				additionalR2Cshared = ((axis->specializationConstants.fft_dim_full.data.i % 2) == 0) ? 2 : 1;
+				if ((axis->specializationConstants.performDCT == 2) || (axis->specializationConstants.performDST == 2) || (axis->specializationConstants.performDCT == 3) || (axis->specializationConstants.performDST == 3) || (((axis->specializationConstants.performDCT == 4) || (axis->specializationConstants.performDST == 4)) && ((axis->specializationConstants.fft_dim_full.data.i % 2) != 0))) additionalR2Cshared = 1;
+			}
+			if ((axis->specializationConstants.mergeSequencesR2C) && ((!axis->specializationConstants.performR2CmultiUpload) && (!axis->specializationConstants.performR2RmultiUpload) && ((axis->specializationConstants.fft_dim_full.data.i + additionalR2Cshared) <= maxSequenceLengthSharedMemory) && (FFTPlan->actualFFTSizePerAxis[axis_id][1] > 1) && ((FFTPlan->actualPerformR2CPerAxis[axis_id]) || ((((axis->specializationConstants.performDCT == 3) || (axis->specializationConstants.performDST == 3)) || ((axis->specializationConstants.performDCT == 2) || (axis->specializationConstants.performDST == 2)) || ((axis->specializationConstants.performDCT == 1) || (axis->specializationConstants.performDST == 1)) || (((axis->specializationConstants.performDCT == 4) || (axis->specializationConstants.performDST == 4)) && ((app->configuration.size[axis_id] % 2) != 0))) && (axis_id == 0))))) {
+				if (((axis->specializationConstants.fft_dim_full.data.i + additionalR2Cshared) * axis->axisBlock[1] * axis->specializationConstants.complexSize) > (app->configuration.sharedMemorySize - axis->specializationConstants.additionalRaderSharedSize.data.i * axis->specializationConstants.complexSize)) {
+					if (axis->axisBlock[1] > maxBatchCoalesced) {
+						axis->axisBlock[1] = maxBatchCoalesced;
+					}
+					else {
+						axis->specializationConstants.mergeSequencesR2C = 0;
+					}
+				}
+			}
 			axis->groupedBatch = axis->axisBlock[1];
-			if (((axis->specializationConstants.fftDim.data.i % 2 == 0) || (axis->axisBlock[0] < app->configuration.numSharedBanks / 4)) && (!(((!axis->specializationConstants.reorderFourStep) || (axis->specializationConstants.useBluesteinFFT)) && (FFTPlan->numAxisUploads[0] > 1))) && (axis->axisBlock[1] > 1) && (axis->axisBlock[1] * axis->specializationConstants.fftDim.data.i < maxSequenceLengthSharedMemory) && (!((app->configuration.performZeropadding[0] || app->configuration.performZeropadding[1] || app->configuration.performZeropadding[2])))) {
+			if ((!axis->specializationConstants.useRaderMult) && (axis->axisBlock[1] >= 4) && (((axis->axisBlock[0] & (axis->axisBlock[0]-1))) || (axis->axisBlock[0] <= app->configuration.numSharedBanks / 2)) && (!(((!axis->specializationConstants.reorderFourStep) || (axis->specializationConstants.useBluesteinFFT)) && (FFTPlan->numAxisUploads[0] > 1))) && (axis->axisBlock[1] > 1) && (axis->axisBlock[1] * axis->specializationConstants.fftDim.data.i < maxSequenceLengthSharedMemory) && (!((app->configuration.performZeropadding[0] || app->configuration.performZeropadding[1] || app->configuration.performZeropadding[2])))) {
 				/*#if (VKFFT_BACKEND==0)
 									if (((axis->specializationConstants.fftDim & (axis->specializationConstants.fftDim - 1)) != 0)) {
 										pfUINT temp = axis->axisBlock[1];
@@ -392,14 +490,16 @@ static inline VkFFTResult VkFFTSplitAxisBlock(VkFFTApplication* app, VkFFTPlan* 
 
 			pfUINT scale = app->configuration.aimThreads / axis->axisBlock[1] / axis->groupedBatch;
 			if ((scale > 1) && ((axis->specializationConstants.fftDim.data.i * axis->groupedBatch * scale <= maxSequenceLengthSharedMemory))) axis->groupedBatch *= scale;
+			if (axis->axisBlock[1] * axis->groupedBatch < app->configuration.warpSize) axis->groupedBatch = app->configuration.warpSize/axis->axisBlock[1];
+			
+			if ((axis->specializationConstants.reorderFourStep == 2) || ((axis->specializationConstants.reorderFourStep == 1) && (axis->specializationConstants.disableTransposeSharedReorderFourStepForWrite)))
+				axis->axisBlock[0] = ((pfUINT)(axis->specializationConstants.fft_dim_full.data.i / axis->specializationConstants.fftDim.data.i) > axis->groupedBatch) ? axis->groupedBatch : (axis->specializationConstants.fft_dim_full.data.i / axis->specializationConstants.fftDim.data.i);
+			else
+				axis->axisBlock[0] = ((pfUINT)axis->specializationConstants.stageStartSize.data.i > axis->groupedBatch) ? axis->groupedBatch : axis->specializationConstants.stageStartSize.data.i;
+			if ((axis->specializationConstants.reorderFourStep == 1) && (axis->specializationConstants.disableTransposeSharedReorderFourStepForWrite) && ((axis->specializationConstants.warpSize / axis->axisBlock[0]) < (app->configuration.coalescedMemory / axis->specializationConstants.complexSize)))
+				axis->axisBlock[0] = axis->specializationConstants.warpSize / (app->configuration.coalescedMemory / axis->specializationConstants.complexSize);
 
-			axis->axisBlock[0] = ((pfUINT)axis->specializationConstants.stageStartSize.data.i > axis->groupedBatch) ? axis->groupedBatch : axis->specializationConstants.stageStartSize.data.i;
-			if (app->configuration.vendorID == 0x10DE) {
-				while ((axis->axisBlock[1] * axis->axisBlock[0] >= 2 * app->configuration.aimThreads) && (axis->axisBlock[0] > maxBatchCoalesced)) {
-					axis->axisBlock[0] /= 2;
-					if (axis->axisBlock[0] < maxBatchCoalesced) axis->axisBlock[0] = maxBatchCoalesced;
-				}
-			}
+			
 			if (axis->axisBlock[0] > app->configuration.maxComputeWorkGroupSize[0]) axis->axisBlock[0] = app->configuration.maxComputeWorkGroupSize[0];
 			if (axis->axisBlock[0] * axis->axisBlock[1] > maxThreadNum) {
 				for (pfUINT i = 1; i <= axis->axisBlock[0]; i++) {
@@ -442,14 +542,9 @@ static inline VkFFTResult VkFFTSplitAxisBlock(VkFFTApplication* app, VkFFTPlan* 
 		if (axis->specializationConstants.useRaderFFT) {
 			if (axis->axisBlock[1] < axis->specializationConstants.minRaderFFTThreadNum) axis->axisBlock[1] = axis->specializationConstants.minRaderFFTThreadNum;
 		}
-
+		if (axis->axisBlock[1] * axis->groupedBatch < app->configuration.warpSize) axis->groupedBatch = app->configuration.warpSize/axis->axisBlock[1];
 		axis->axisBlock[0] = (FFTPlan->actualFFTSizePerAxis[axis_id][0] > axis->groupedBatch) ? axis->groupedBatch : FFTPlan->actualFFTSizePerAxis[axis_id][0];
-		if (app->configuration.vendorID == 0x10DE) {
-			while ((axis->axisBlock[1] * axis->axisBlock[0] >= 2 * app->configuration.aimThreads) && (axis->axisBlock[0] > maxBatchCoalesced)) {
-				axis->axisBlock[0] /= 2;
-				if (axis->axisBlock[0] < maxBatchCoalesced) axis->axisBlock[0] = maxBatchCoalesced;
-			}
-		}
+		
 		if (axis->axisBlock[0] > app->configuration.maxComputeWorkGroupSize[0]) axis->axisBlock[0] = app->configuration.maxComputeWorkGroupSize[0];
 		if (axis->axisBlock[0] * axis->axisBlock[1] > maxThreadNum) {
 			for (pfUINT i = 1; i <= axis->axisBlock[0]; i++) {

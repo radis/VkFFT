@@ -141,6 +141,21 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 		if (app->configuration.performConvolution)
 			axis->specializationConstants.performPostCompilationKernelOffset = 1;
 	}
+	else {
+		axis->specializationConstants.inputOffset.type = 31;
+		axis->specializationConstants.inputOffset.data.i = app->configuration.inputBufferOffset;
+		axis->specializationConstants.outputOffset.type = 31;
+		axis->specializationConstants.outputOffset.data.i = app->configuration.outputBufferOffset;
+		axis->specializationConstants.kernelOffset.type = 31;
+		axis->specializationConstants.kernelOffset.data.i = app->configuration.kernelOffset;
+
+		axis->specializationConstants.inputOffsetImaginary.type = 31;
+		axis->specializationConstants.inputOffsetImaginary.data.i = app->configuration.inputBufferOffsetImaginary;
+		axis->specializationConstants.outputOffsetImaginary.type = 31;
+		axis->specializationConstants.outputOffsetImaginary.data.i = app->configuration.outputBufferOffsetImaginary;
+		axis->specializationConstants.kernelOffsetImaginary.type = 31;
+		axis->specializationConstants.kernelOffsetImaginary.data.i = app->configuration.kernelOffsetImaginary;
+	}
 
 	resFFT = VkFFTCheckUpdateBufferSet(app, axis, 1, 0);
 	if (resFFT != VKFFT_SUCCESS) {
@@ -196,6 +211,8 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 
 		axis->specializationConstants.numCoordinates = (app->configuration.matrixConvolution > 1) ? 1 : (int)app->configuration.coordinateFeatures;
 		axis->specializationConstants.matrixConvolution = (int)app->configuration.matrixConvolution;
+		axis->specializationConstants.singleKernelMultipleBatches = (int)app->configuration.singleKernelMultipleBatches;
+		
         for (pfUINT i = 0; i < VKFFT_MAX_FFT_DIMENSIONS; i++) {
             axis->specializationConstants.size[i].type = 31;
             axis->specializationConstants.size[i].data.i = (pfINT)app->configuration.size[i];
@@ -281,14 +298,23 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 			if (axis->specializationConstants.performPostCompilationInputOffset) {
 				axis->pushConstants.performPostCompilationInputOffset = 1;
 				axis->pushConstants.structSize += 1;
+				if (axis->specializationConstants.inputBufferSeparateComplexComponents){
+					axis->pushConstants.structSize += 1;
+				}
 			}
 			if (axis->specializationConstants.performPostCompilationOutputOffset) {
 				axis->pushConstants.performPostCompilationOutputOffset = 1;
 				axis->pushConstants.structSize += 1;
+				if (axis->specializationConstants.outputBufferSeparateComplexComponents){
+					axis->pushConstants.structSize += 1;
+				}
 			}
 			if (axis->specializationConstants.performPostCompilationKernelOffset) {
 				axis->pushConstants.performPostCompilationKernelOffset = 1;
 				axis->pushConstants.structSize += 1;
+				if (axis->specializationConstants.kernelSeparateComplexComponents){
+					axis->pushConstants.structSize += 1;
+				}
 			}
 			if (app->configuration.useUint64)
 				axis->pushConstants.structSize *= sizeof(pfUINT);
@@ -369,6 +395,16 @@ static inline VkFFTResult VkFFTPlanR2CMultiUploadDecomposition(VkFFTApplication*
 			code0 = 0;
 			axis->specializationConstants.code0 = 0;
 		}
+	}
+	resFFT = freeMemoryParametersAPI(app, &axis->specializationConstants);
+	if (resFFT != VKFFT_SUCCESS) {
+		deleteVkFFT(app);
+		return resFFT;
+	}
+	resFFT = freeParametersAPI(app, &axis->specializationConstants);
+	if (resFFT != VKFFT_SUCCESS) {
+		deleteVkFFT(app);
+		return resFFT;
 	}
 	return resFFT;
 }

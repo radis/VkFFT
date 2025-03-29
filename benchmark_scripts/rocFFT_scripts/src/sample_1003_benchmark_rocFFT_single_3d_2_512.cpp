@@ -13,7 +13,7 @@
 
 //ROCM parts
 #include "hip/hip_runtime.h"
-#include <hipfft.h>
+#include <hipfft/hipfft.h>
 
 #define GROUP 1
 

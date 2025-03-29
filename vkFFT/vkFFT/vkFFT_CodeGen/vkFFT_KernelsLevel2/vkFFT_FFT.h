@@ -51,6 +51,18 @@ static inline VkFFTResult shaderGen_FFT(VkFFTSpecializationConstantsLayout* sc, 
 	temp_int.type = 31;
 	PfContainer temp_int1 = VKFFT_ZERO_INIT;
 	temp_int1.type = 31;
+	if (!sc->disableSetLocale) {
+		const char* loc_oldLocale = setlocale(LC_ALL, NULL);
+		int len = strlen(loc_oldLocale);
+		if (len < 4) len = 4;
+		sc->oldLocale = (char*)calloc(len, sizeof(char));
+		if (!sc->oldLocale) {
+			sc->res = VKFFT_ERROR_MALLOC_FAILED;
+			return sc->res;
+		}
+		strcpy(sc->oldLocale, loc_oldLocale);
+		setlocale(LC_ALL, "C");
+	}
 	appendVersion(sc);
 	appendExtensions(sc);
 	appendLayoutVkFFT(sc);
@@ -166,59 +178,23 @@ static inline VkFFTResult shaderGen_FFT(VkFFTSpecializationConstantsLayout* sc, 
 					case 2:
 						stageSizeSum.data.i += stageSize.data.i;
 						break;
-					case 3:
-						stageSizeSum.data.i += stageSize.data.i * 2;
-						break;
 					case 4:
 						stageSizeSum.data.i += stageSize.data.i * 2;
-						break;
-					case 5:
-						stageSizeSum.data.i += stageSize.data.i * 4;
-						break;
-					case 6:
-						stageSizeSum.data.i += stageSize.data.i * 5;
-						break;
-					case 7:
-							stageSizeSum.data.i += stageSize.data.i * 6;
 						break;
 					case 8:
 						stageSizeSum.data.i += stageSize.data.i * 3;
 						break;
-					case 9:
-						stageSizeSum.data.i += stageSize.data.i * 8;
-						break;
-					case 10:
-						stageSizeSum.data.i += stageSize.data.i * 9;
-						break;
-					case 11:
-						if (sc->precision == 3)
-							stageSizeSum.data.i += stageSize.data.i * 11;
-						else
-							stageSizeSum.data.i += stageSize.data.i * 10;
-						break;
-					case 12:
-						stageSizeSum.data.i += stageSize.data.i * 11;
-						break;
-					case 13:
-						if (sc->precision == 3)
-							stageSizeSum.data.i += stageSize.data.i * 13;
-						else
-							stageSizeSum.data.i += stageSize.data.i * 12;
-						break;
-					case 14:
-						stageSizeSum.data.i += stageSize.data.i * 13;
-						break;
-					case 15:
-						stageSizeSum.data.i += stageSize.data.i * 14;
-						break;
-					case 16:
+					/*case 16:
 						stageSizeSum.data.i += stageSize.data.i * 4;
 						break;
 					case 32:
 						stageSizeSum.data.i += stageSize.data.i * 5;
-						break;
+						break;*/
 					default:
-						stageSizeSum.data.i += stageSize.data.i * (sc->stageRadix[i]);
+						if (sc->rader_generator[i] > 0)
+							stageSizeSum.data.i += stageSize.data.i * (sc->stageRadix[i]);
+						else
+							stageSizeSum.data.i += stageSize.data.i * (sc->stageRadix[i]-1);
 						break;
 					}
 				}
@@ -277,59 +253,23 @@ static inline VkFFTResult shaderGen_FFT(VkFFTSpecializationConstantsLayout* sc, 
 						case 2:
 							stageSizeSum.data.i += stageSize.data.i;
 							break;
-						case 3:
-							stageSizeSum.data.i += stageSize.data.i * 2;
-							break;
 						case 4:
 							stageSizeSum.data.i += stageSize.data.i * 2;
-							break;
-						case 5:
-							stageSizeSum.data.i += stageSize.data.i * 4;
-							break;
-						case 6:
-							stageSizeSum.data.i += stageSize.data.i * 5;
-							break;
-						case 7:
-								stageSizeSum.data.i += stageSize.data.i * 6;
 							break;
 						case 8:
 							stageSizeSum.data.i += stageSize.data.i * 3;
 							break;
-						case 9:
-							stageSizeSum.data.i += stageSize.data.i * 8;
-							break;
-						case 10:
-							stageSizeSum.data.i += stageSize.data.i * 9;
-							break;
-						case 11:
-							if (sc->precision == 3)
-								stageSizeSum.data.i += stageSize.data.i * 11;
-							else
-								stageSizeSum.data.i += stageSize.data.i * 10;
-							break;
-						case 12:
-							stageSizeSum.data.i += stageSize.data.i * 11;
-							break;
-						case 13:
-							if (sc->precision == 3)
-								stageSizeSum.data.i += stageSize.data.i * 13;
-							else
-								stageSizeSum.data.i += stageSize.data.i * 12;
-							break;
-						case 14:
-							stageSizeSum.data.i += stageSize.data.i * 13;
-							break;
-						case 15:
-							stageSizeSum.data.i += stageSize.data.i * 14;
-							break;
-						case 16:
+						/*case 16:
 							stageSizeSum.data.i += stageSize.data.i * 4;
 							break;
 						case 32:
 							stageSizeSum.data.i += stageSize.data.i * 5;
-							break;
+							break;*/
 						default:
-							stageSizeSum.data.i += stageSize.data.i * (sc->stageRadix[i]);
+							if (sc->rader_generator[i] > 0)
+								stageSizeSum.data.i += stageSize.data.i * (sc->stageRadix[i]);
+							else
+								stageSizeSum.data.i += stageSize.data.i * (sc->stageRadix[i]-1);
 							break;
 						}
 					}
@@ -383,7 +323,13 @@ static inline VkFFTResult shaderGen_FFT(VkFFTSpecializationConstantsLayout* sc, 
 	appendKernelEnd(sc);
 
 	freeRegisterInitialization(sc, type);
-	
+	if (!sc->disableSetLocale) {
+		if (!strcmp(sc->oldLocale, "")) {
+			setlocale(LC_ALL, sc->oldLocale);
+		}
+		free(sc->oldLocale);
+		sc->oldLocale = 0;
+	}
 	return sc->res;
 }
 

@@ -45,6 +45,18 @@ static inline VkFFTResult shaderGen_R2C_even_decomposition(VkFFTSpecializationCo
 	temp_int1.type = 31;
 	PfContainer temp_double = VKFFT_ZERO_INIT;
 	temp_double.type = 22;
+	if (!sc->disableSetLocale) {
+		const char* loc_oldLocale = setlocale(LC_ALL, NULL);
+		int len = strlen(loc_oldLocale);
+		if (len < 4) len = 4;
+		sc->oldLocale = (char*)calloc(len, sizeof(char));
+		if (!sc->oldLocale) {
+			sc->res = VKFFT_ERROR_MALLOC_FAILED;
+			return sc->res;
+		}
+		strcpy(sc->oldLocale, loc_oldLocale);
+		setlocale(LC_ALL, "C");
+	}
 	appendVersion(sc);
 	appendExtensions(sc);
 	appendLayoutVkFFT(sc);
@@ -236,7 +248,13 @@ static inline VkFFTResult shaderGen_R2C_even_decomposition(VkFFTSpecializationCo
 	appendKernelEnd(sc);
 
 	freeRegisterInitialization_R2C(sc, type);
-
+	if (!sc->disableSetLocale) {
+		if (!strcmp(sc->oldLocale, "")) {
+			setlocale(LC_ALL, sc->oldLocale);
+		}
+		free(sc->oldLocale);
+		sc->oldLocale = 0;
+	}
 	return sc->res;
 }
 #endif

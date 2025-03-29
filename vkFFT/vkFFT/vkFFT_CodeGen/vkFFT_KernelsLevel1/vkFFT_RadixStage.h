@@ -79,12 +79,12 @@ static inline void appendRadixStageNonStrided(VkFFTSpecializationConstantsLayout
 	case 8:
 		numLUTelementsStage = 3;
 		break;
-	case 16:
+	/*case 16:
 		numLUTelementsStage = 4;
 		break;
 	case 32:
 		numLUTelementsStage = 5;
-		break;
+		break;*/
 	default:
 		if (stageRadix->data.i < sc->fixMinRaderPrimeMult)
 			numLUTelementsStage = stageRadix->data.i - 1;
@@ -343,12 +343,12 @@ static inline void appendRadixStageStrided(VkFFTSpecializationConstantsLayout* s
 	case 8:
 		numLUTelementsStage = 3;
 		break;
-	case 16:
+	/*case 16:
 		numLUTelementsStage = 4;
 		break;
 	case 32:
 		numLUTelementsStage = 5;
-		break;
+		break;*/
 	default:
 		if (stageRadix->data.i < sc->fixMinRaderPrimeMult)
 			numLUTelementsStage = stageRadix->data.i - 1;

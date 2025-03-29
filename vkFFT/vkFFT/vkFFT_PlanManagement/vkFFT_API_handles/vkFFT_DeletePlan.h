@@ -24,6 +24,10 @@
 #include "vkFFT/vkFFT_Structs/vkFFT_Structs.h"
 
 static inline void deleteAxis(VkFFTApplication* app, VkFFTAxis* axis, int isInverseBluesteinAxes) {
+	if (app->configuration.keepShaderCode) {
+		free(axis->specializationConstants.code0);
+		axis->specializationConstants.code0 = 0;
+	}
 	if (axis->specializationConstants.numRaderPrimes && (!isInverseBluesteinAxes)) {
 		free(axis->specializationConstants.raderContainer);
 		axis->specializationConstants.raderContainer = 0;
@@ -83,13 +87,13 @@ static inline void deleteAxis(VkFFTApplication* app, VkFFTAxis* axis, int isInve
 		res = clReleaseMemObject(axis->bufferLUT);
 		if (res == 0) axis->bufferLUT = 0;
 	}
-	if (axis->program != 0) {
-		res = clReleaseProgram(axis->program);
-		if (res == 0) axis->program = 0;
+	if (axis->VkFFTProgram != 0) {
+		res = clReleaseProgram(axis->VkFFTProgram);
+		if (res == 0) axis->VkFFTProgram = 0;
 	}
-	if (axis->kernel != 0) {
-		res = clReleaseKernel(axis->kernel);
-		if (res == 0) axis->kernel = 0;
+	if (axis->VkFFTKernel != 0) {
+		res = clReleaseKernel(axis->VkFFTKernel);
+		if (res == 0) axis->VkFFTKernel = 0;
 	}
 #elif(VKFFT_BACKEND==4)
 	ze_result_t res = ZE_RESULT_SUCCESS;

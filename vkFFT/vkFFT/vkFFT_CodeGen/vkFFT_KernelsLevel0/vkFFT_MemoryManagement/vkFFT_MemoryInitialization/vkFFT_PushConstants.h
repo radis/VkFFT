@@ -46,18 +46,9 @@ static inline void appendPushConstants(VkFFTSpecializationConstantsLayout* sc) {
 	sc->tempLen = sprintf(sc->tempStr, "layout(push_constant) uniform PushConsts\n{\n");
 	PfAppendLine(sc);
 	
-#elif(VKFFT_BACKEND==1)
+#else
 	sc->tempLen = sprintf(sc->tempStr, "	typedef struct {\n");
 	PfAppendLine(sc);
-	
-#elif(VKFFT_BACKEND==2)
-	sc->tempLen = sprintf(sc->tempStr, "	typedef struct {\n");
-	PfAppendLine(sc);
-	
-#elif(VKFFT_BACKEND==3)
-	sc->tempLen = sprintf(sc->tempStr, "	typedef struct {\n");
-	PfAppendLine(sc);
-	
 #endif
 	char tempCopyStr[60];
 	if (sc->performWorkGroupShift[0]) {
@@ -79,37 +70,39 @@ static inline void appendPushConstants(VkFFTSpecializationConstantsLayout* sc) {
 		appendPushConstant(sc, &sc->inputOffset);
 		sprintf(tempCopyStr, "consts.%s", sc->inputOffset.name);
 		sprintf(sc->inputOffset.name, "%s", tempCopyStr);
+		if (sc->inputBufferSeparateComplexComponents) {
+			appendPushConstant(sc, &sc->inputOffsetImaginary);
+			sprintf(tempCopyStr, "consts.%s", sc->inputOffsetImaginary.name);
+			sprintf(sc->inputOffsetImaginary.name, "%s", tempCopyStr);
+		}
 	}
 	if (sc->performPostCompilationOutputOffset) {
 		appendPushConstant(sc, &sc->outputOffset);
 		sprintf(tempCopyStr, "consts.%s", sc->outputOffset.name);
 		sprintf(sc->outputOffset.name, "%s", tempCopyStr);
+		if (sc->outputBufferSeparateComplexComponents) {
+			appendPushConstant(sc, &sc->outputOffsetImaginary);
+			sprintf(tempCopyStr, "consts.%s", sc->outputOffsetImaginary.name);
+			sprintf(sc->outputOffsetImaginary.name, "%s", tempCopyStr);
+		}
 	}
 	if (sc->performPostCompilationKernelOffset) {
 		appendPushConstant(sc, &sc->kernelOffset);
 		sprintf(tempCopyStr, "consts.%s", sc->kernelOffset.name);
 		sprintf(sc->kernelOffset.name, "%s", tempCopyStr);
+		if (sc->kernelSeparateComplexComponents) {
+			appendPushConstant(sc, &sc->kernelOffsetImaginary);
+			sprintf(tempCopyStr, "consts.%s", sc->kernelOffsetImaginary.name);
+			sprintf(sc->kernelOffsetImaginary.name, "%s", tempCopyStr);
+		}
 	}
 #if(VKFFT_BACKEND==0)
 	sc->tempLen = sprintf(sc->tempStr, "} consts;\n\n");
 	PfAppendLine(sc);
 	
-#elif(VKFFT_BACKEND==1)
+#else
 	sc->tempLen = sprintf(sc->tempStr, "	}PushConsts;\n");
 	PfAppendLine(sc);
-	//sc->tempLen = sprintf(sc->tempStr, "	__constant__ PushConsts consts;\n");
-	//PfAppendLine(sc);
-#elif(VKFFT_BACKEND==2)
-	sc->tempLen = sprintf(sc->tempStr, "	}PushConsts;\n");
-	PfAppendLine(sc);
-	
-	//sc->tempLen = sprintf(sc->tempStr, "	__constant__ PushConsts consts;\n");
-	//PfAppendLine(sc);
-	
-#elif(VKFFT_BACKEND==3)
-	sc->tempLen = sprintf(sc->tempStr, "	}PushConsts;\n");
-	PfAppendLine(sc);
-	
 #endif
 	return;
 }

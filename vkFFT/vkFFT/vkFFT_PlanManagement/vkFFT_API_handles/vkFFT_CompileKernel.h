@@ -680,7 +680,7 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 		memcpy(code, localStrPointer + sizeof(pfUINT), codeSize);
 		app->currentApplicationStringPos += codeSize + sizeof(pfUINT);
 		const unsigned char* temp_code = (const unsigned char*)code;
-		axis->program = clCreateProgramWithBinary(app->configuration.context[0], 1, app->configuration.device, &codeSize_size_t, (const unsigned char**)(&temp_code), 0, &res);
+		axis->VkFFTProgram = clCreateProgramWithBinary(app->configuration.context[0], 1, app->configuration.device, &codeSize_size_t, (const unsigned char**)(&temp_code), 0, &res);
 		if (res != CL_SUCCESS) {
 			free(code);
 			code = 0;
@@ -695,7 +695,7 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 	else {
 		size_t codelen = strlen(code0);
 		const char* temp_code = (const char*)code0;
-		axis->program = clCreateProgramWithSource(app->configuration.context[0], 1, (const char**)&temp_code, &codelen, &res);
+		axis->VkFFTProgram = clCreateProgramWithSource(app->configuration.context[0], 1, (const char**)&temp_code, &codelen, &res);
 		if (res != CL_SUCCESS) {
 			free(code0);
 			code0 = 0;
@@ -703,10 +703,10 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 			return VKFFT_ERROR_FAILED_TO_CREATE_PROGRAM;
 		}
 	}
-	res = clBuildProgram(axis->program, 1, app->configuration.device, 0, 0, 0);
+	res = clBuildProgram(axis->VkFFTProgram, 1, app->configuration.device, 0, 0, 0);
 	if (res != CL_SUCCESS) {
 		size_t log_size;
-		clGetProgramBuildInfo(axis->program, app->configuration.device[0], CL_PROGRAM_BUILD_LOG, 0, 0, &log_size);
+		clGetProgramBuildInfo(axis->VkFFTProgram, app->configuration.device[0], CL_PROGRAM_BUILD_LOG, 0, 0, &log_size);
 		char* log = (char*)malloc(log_size);
 		if (!log) {
 			free(code0);
@@ -715,7 +715,7 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 			return VKFFT_ERROR_FAILED_TO_COMPILE_PROGRAM;
 		}
 		else {
-			clGetProgramBuildInfo(axis->program, app->configuration.device[0], CL_PROGRAM_BUILD_LOG, log_size, log, 0);
+			clGetProgramBuildInfo(axis->VkFFTProgram, app->configuration.device[0], CL_PROGRAM_BUILD_LOG, log_size, log, 0);
 			printf("%s\n", log);
 			free(log);
 			log = 0;
@@ -728,7 +728,7 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 	}
 	if (app->configuration.saveApplicationToString) {
 		size_t codeSize;
-		res = clGetProgramInfo(axis->program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &codeSize, NULL);
+		res = clGetProgramInfo(axis->VkFFTProgram, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &codeSize, 0);
 		if (res != CL_SUCCESS) {
 			free(code0);
 			code0 = 0;
@@ -743,7 +743,7 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 			deleteVkFFT(app);
 			return VKFFT_ERROR_MALLOC_FAILED;
 		}
-		res = clGetProgramInfo(axis->program, CL_PROGRAM_BINARIES, sizeof(unsigned char*), &axis->binary, NULL);
+		res = clGetProgramInfo(axis->VkFFTProgram, CL_PROGRAM_BINARIES, sizeof(unsigned char*), &axis->binary, 0);
 		if (res != CL_SUCCESS) {
 			if (app->configuration.saveApplicationToString) {
 				free(axis->binary);
@@ -755,7 +755,7 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 			return VKFFT_ERROR_FAILED_TO_COMPILE_PROGRAM;
 		}
 	}
-	axis->kernel = clCreateKernel(axis->program, axis->VkFFTFunctionName, &res);
+	axis->VkFFTKernel = clCreateKernel(axis->VkFFTProgram, axis->VkFFTFunctionName, &res);
 	if (res != CL_SUCCESS) {
 		if (app->configuration.saveApplicationToString) {
 			free(axis->binary);

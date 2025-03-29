@@ -13,7 +13,7 @@
 
 #if(VKFFT_BACKEND==0)
 #include "vulkan/vulkan.h"
-#include "glslang_c_interface.h"
+#include "glslang/Include/glslang_c_interface.h"
 #elif(VKFFT_BACKEND==1)
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -93,13 +93,25 @@ VkFFTResult sample_11_precision_VkFFT_single(VkGPU* vkGPU, uint64_t file_output,
 
 	for (int n = 0; n < num_benchmark_samples; n++) {
 		for (int r = 0; r < num_runs; r++) {
+			int useSeparateComplexComponents = 0;
 
 			fftwf_complex* inputC;
+			float* inputCr;
+			float* inputCi;
+			int offsetR = sizeof(float) * 1; //in bytes
+			int offsetI = sizeof(float) * 8;
 			fftw_complex* inputC_double;
 			uint64_t dims[3] = { benchmark_dimensions[n][0] , benchmark_dimensions[n][1] ,benchmark_dimensions[n][2] };
-
 			inputC = (fftwf_complex*)(malloc(sizeof(fftwf_complex) * dims[0] * dims[1] * dims[2]));
 			if (!inputC) return VKFFT_ERROR_MALLOC_FAILED;
+
+			if (useSeparateComplexComponents) {
+				inputCr = (float*)(malloc(sizeof(float) * dims[0] * dims[1] * dims[2]+offsetR));
+				if (!inputCr) return VKFFT_ERROR_MALLOC_FAILED;
+				inputCi = (float*)(malloc(sizeof(float) * dims[0] * dims[1] * dims[2]+offsetI));
+				if (!inputCi) return VKFFT_ERROR_MALLOC_FAILED;
+			}
+
 			inputC_double = (fftw_complex*)(malloc(sizeof(fftw_complex) * dims[0] * dims[1] * dims[2]));
 			if (!inputC_double) return VKFFT_ERROR_MALLOC_FAILED;
 			for (uint64_t l = 0; l < dims[2]; l++) {
@@ -109,6 +121,10 @@ VkFFTResult sample_11_precision_VkFFT_single(VkGPU* vkGPU, uint64_t file_output,
 						inputC[i + j * dims[0] + l * dims[0] * dims[1]][1] = (float)(2 * ((float)rand()) / RAND_MAX - 1.0);
 						inputC_double[i + j * dims[0] + l * dims[0] * dims[1]][0] = (double)inputC[i + j * dims[0] + l * dims[0] * dims[1]][0];
 						inputC_double[i + j * dims[0] + l * dims[0] * dims[1]][1] = (double)inputC[i + j * dims[0] + l * dims[0] * dims[1]][1];
+						if (useSeparateComplexComponents) {
+							inputCr[offsetR/sizeof(float) + i + j * dims[0] + l * dims[0] * dims[1]] = inputC[i + j * dims[0] + l * dims[0] * dims[1]][0];
+							inputCi[offsetI/sizeof(float) + i + j * dims[0] + l * dims[0] * dims[1]] = inputC[i + j * dims[0] + l * dims[0] * dims[1]][1];
+						}
 					}
 				}
 			}
@@ -152,12 +168,12 @@ VkFFTResult sample_11_precision_VkFFT_single(VkGPU* vkGPU, uint64_t file_output,
 			configuration.size[0] = benchmark_dimensions[n][0]; //Multidimensional FFT dimensions sizes (default 1). For best performance (and stability), order dimensions in descendant size order as: x>y>z.   
 			configuration.size[1] = benchmark_dimensions[n][1];
 			configuration.size[2] = benchmark_dimensions[n][2];
-
+			//configuration.keepShaderCode = 1;
 			//After this, configuration file contains pointers to Vulkan objects needed to work with the GPU: VkDevice* device - created device, [uint64_t *bufferSize, VkBuffer *buffer, VkDeviceMemory* bufferDeviceMemory] - allocated GPU memory FFT is performed on. [uint64_t *kernelSize, VkBuffer *kernel, VkDeviceMemory* kernelDeviceMemory] - allocated GPU memory, where kernel for convolution is stored.
 #if(VKFFT_BACKEND==5)
-            configuration.device = vkGPU->device;
+			configuration.device = vkGPU->device;
 #else
-            configuration.device = &vkGPU->device;
+			configuration.device = &vkGPU->device;
 #endif
 #if(VKFFT_BACKEND==0)
 			configuration.queue = &vkGPU->queue; //to allocate memory for LUT, we have to pass a queue, vkGPU->fence, commandPool and physicalDevice pointers 
@@ -172,17 +188,21 @@ VkFFTResult sample_11_precision_VkFFT_single(VkGPU* vkGPU, uint64_t file_output,
 			configuration.commandQueue = &vkGPU->commandQueue;
 			configuration.commandQueueID = vkGPU->commandQueueID;
 #elif(VKFFT_BACKEND==5)
-            configuration.queue = vkGPU->queue;
+			configuration.queue = vkGPU->queue;
 #endif
-
-			uint64_t numBuf = 1;
+			configuration.specifyOffsetsAtLaunch = 1;
+			configuration.bufferSeparateComplexComponents = useSeparateComplexComponents;
+			uint64_t numBuf = (configuration.bufferSeparateComplexComponents) ? 2 : 1;
 
 			//Allocate buffers for the input data. - we use 4 in this example
 			uint64_t* bufferSize = (uint64_t*)malloc(sizeof(uint64_t) * numBuf);
 			if (!bufferSize) return VKFFT_ERROR_MALLOC_FAILED;
-			for (uint64_t i = 0; i < numBuf; i++) {
-				bufferSize[i] = {};
-				bufferSize[i] = (uint64_t)sizeof(float) * 2 * configuration.size[0] * configuration.size[1] * configuration.size[2] / numBuf;
+			if (configuration.bufferSeparateComplexComponents) {
+				bufferSize[0] = (uint64_t)(sizeof(float) * configuration.size[0] * configuration.size[1] * configuration.size[2] + offsetR);
+				bufferSize[1] = (uint64_t)(sizeof(float) * configuration.size[0] * configuration.size[1] * configuration.size[2] + offsetI);
+			}
+			else {
+				bufferSize[0] = (uint64_t)(sizeof(float) * 2 * configuration.size[0] * configuration.size[1] * configuration.size[2]);
 			}
 #if(VKFFT_BACKEND==0)
 			VkBuffer* buffer = (VkBuffer*)malloc(numBuf * sizeof(VkBuffer));
@@ -190,38 +210,43 @@ VkFFTResult sample_11_precision_VkFFT_single(VkGPU* vkGPU, uint64_t file_output,
 			VkDeviceMemory* bufferDeviceMemory = (VkDeviceMemory*)malloc(numBuf * sizeof(VkDeviceMemory));
 			if (!bufferDeviceMemory) return VKFFT_ERROR_MALLOC_FAILED;
 #elif(VKFFT_BACKEND==1)
-			cuFloatComplex* buffer = 0;
+			cuFloatComplex** buffer = (cuFloatComplex**)malloc(numBuf * sizeof(cuFloatComplex*));
+			if (!buffer) return VKFFT_ERROR_MALLOC_FAILED;
 #elif(VKFFT_BACKEND==2)
-			hipFloatComplex* buffer = 0;
+			hipFloatComplex** buffer = (hipFloatComplex**)malloc(numBuf * sizeof(hipFloatComplex*));
+			if (!buffer) return VKFFT_ERROR_MALLOC_FAILED;
 #elif(VKFFT_BACKEND==3)
-			cl_mem buffer = 0;
+			cl_mem* buffer = (cl_mem*)malloc(numBuf * sizeof(cl_mem));
+			if (!buffer) return VKFFT_ERROR_MALLOC_FAILED;
 #elif(VKFFT_BACKEND==4)
-			void* buffer = 0;
+			void** buffer = (void**)malloc(numBuf * sizeof(void*));
+			if (!buffer) return VKFFT_ERROR_MALLOC_FAILED;
 #elif(VKFFT_BACKEND==5)
-            MTL::Buffer* buffer = 0;
+			MTL::Buffer** buffer = (MTL::Buffer**)malloc(numBuf * sizeof(MTL::Buffer*));
+			if (!buffer) return VKFFT_ERROR_MALLOC_FAILED;
 #endif
 			for (uint64_t i = 0; i < numBuf; i++) {
-#if(VKFFT_BACKEND==0)
 				buffer[i] = {};
+#if(VKFFT_BACKEND==0)
 				bufferDeviceMemory[i] = {};
 				resFFT = allocateBuffer(vkGPU, &buffer[i], &bufferDeviceMemory[i], VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, bufferSize[i]);
 				if (resFFT != VKFFT_SUCCESS) return resFFT;
 #elif(VKFFT_BACKEND==1)
-				res = cudaMalloc((void**)&buffer, bufferSize[i]);
+				res = cudaMalloc((void**)&buffer[i], bufferSize[i]);
 				if (res != cudaSuccess) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
 #elif(VKFFT_BACKEND==2)
-				res = hipMalloc((void**)&buffer, bufferSize[i]);
+				res = hipMalloc((void**)&buffer[i], bufferSize[i]);
 				if (res != hipSuccess) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
 #elif(VKFFT_BACKEND==3)
-				buffer = clCreateBuffer(vkGPU->context, CL_MEM_READ_WRITE, bufferSize[i], 0, &res);
+				buffer[i] = clCreateBuffer(vkGPU->context, CL_MEM_READ_WRITE, bufferSize[i], 0, &res);
 				if (res != CL_SUCCESS) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
 #elif(VKFFT_BACKEND==4)
 				ze_device_mem_alloc_desc_t device_desc = {};
 				device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
-				res = zeMemAllocDevice(vkGPU->context, &device_desc, bufferSize[i], sizeof(float), vkGPU->device, &buffer);
+				res = zeMemAllocDevice(vkGPU->context, &device_desc, bufferSize[i], sizeof(float), vkGPU->device, &buffer[i]);
 				if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
 #elif(VKFFT_BACKEND==5)
-                buffer = vkGPU->device->newBuffer(bufferSize[i], MTL::ResourceStorageModePrivate);
+				buffer[i] = vkGPU->device->newBuffer(bufferSize[i], MTL::ResourceStorageModePrivate);
 #endif
 			}
 
@@ -238,16 +263,16 @@ VkFFTResult sample_11_precision_VkFFT_single(VkGPU* vkGPU, uint64_t file_output,
 			configuration.bufferSize = bufferSize;
 
 			//Sample buffer transfer tool. Uses staging buffer (if needed) of the same size as destination buffer, which can be reduced if transfer is done sequentially in small buffers.
-			uint64_t shift = 0;
-			for (uint64_t i = 0; i < numBuf; i++) {
-#if(VKFFT_BACKEND==0)
-				resFFT = transferDataFromCPU(vkGPU, (inputC + shift / sizeof(fftwf_complex)), &buffer[i], bufferSize[i]);
+			//uint64_t shift = 0;
+			if (configuration.bufferSeparateComplexComponents) {
+				resFFT = transferDataFromCPU(vkGPU, inputCr, &buffer[0], bufferSize[0]);
 				if (resFFT != VKFFT_SUCCESS) return resFFT;
-#else
-                resFFT = transferDataFromCPU(vkGPU, (inputC + shift / sizeof(fftwf_complex)), &buffer, bufferSize[i]);
-                if (resFFT != VKFFT_SUCCESS) return resFFT;
-#endif
-				shift += bufferSize[i];
+				resFFT = transferDataFromCPU(vkGPU, inputCi, &buffer[1], bufferSize[1]);
+				if (resFFT != VKFFT_SUCCESS) return resFFT;
+			}
+			else {
+				resFFT = transferDataFromCPU(vkGPU, inputC, &buffer[0], bufferSize[0]);
+				if (resFFT != VKFFT_SUCCESS) return resFFT;
 			}
 			//Initialize applications. This function loads shaders, creates pipeline and configures FFT based on configuration file. No buffer allocations inside VkFFT library.  
 			resFFT = initializeVkFFT(&app, configuration);
@@ -260,31 +285,42 @@ VkFFTResult sample_11_precision_VkFFT_single(VkGPU* vkGPU, uint64_t file_output,
 #if(VKFFT_BACKEND==0)
 			launchParams.buffer = buffer;
 #elif(VKFFT_BACKEND==1)
-			launchParams.buffer = (void**)&buffer;
+			launchParams.buffer = (void**)buffer;
 #elif(VKFFT_BACKEND==2)
-			launchParams.buffer = (void**)&buffer;
+			launchParams.buffer = (void**)buffer;
 #elif(VKFFT_BACKEND==3)
-			launchParams.buffer = &buffer;
+			launchParams.buffer = buffer;
 #elif(VKFFT_BACKEND==4)
-			launchParams.buffer = (void**)&buffer;
+			launchParams.buffer = (void**)buffer;
 #elif(VKFFT_BACKEND==5)
-            launchParams.buffer = &buffer;
+            launchParams.buffer = buffer;
 #endif
+			if (configuration.bufferSeparateComplexComponents) {
+				launchParams.bufferOffset = offsetR;
+				launchParams.bufferOffsetImaginary = offsetI;
+			}
+
 			resFFT = performVulkanFFT(vkGPU, &app, &launchParams, -1, num_iter);
 			if (resFFT != VKFFT_SUCCESS) return resFFT;
 			fftwf_complex* output_VkFFT = (fftwf_complex*)(malloc(sizeof(fftwf_complex) * dims[0] * dims[1] * dims[2]));
 			if (!output_VkFFT) return VKFFT_ERROR_MALLOC_FAILED;
+			float* output_VkFFTr;
+			float* output_VkFFTi;
+			if (configuration.bufferSeparateComplexComponents) {
+				output_VkFFTr = (float*)(malloc(sizeof(float) * dims[0] * dims[1] * dims[2] + offsetR));
+				if (!output_VkFFTr) return VKFFT_ERROR_MALLOC_FAILED;
+				output_VkFFTi = (float*)(malloc(sizeof(float) * dims[0] * dims[1] * dims[2] + offsetI));
+				if (!output_VkFFTi) return VKFFT_ERROR_MALLOC_FAILED;
+			}
 			//Transfer data from GPU using staging buffer.
-			shift = 0;
-			for (uint64_t i = 0; i < numBuf; i++) {
-#if(VKFFT_BACKEND==0)
-				resFFT = transferDataToCPU(vkGPU, (output_VkFFT + shift / sizeof(fftwf_complex)), &buffer[i], bufferSize[i]);
-				if (resFFT != VKFFT_SUCCESS) return resFFT;
-#else
-                resFFT = transferDataToCPU(vkGPU, (output_VkFFT + shift / sizeof(fftwf_complex)), &buffer, bufferSize[i]);
+			if (configuration.bufferSeparateComplexComponents) {
+				resFFT = transferDataToCPU(vkGPU, output_VkFFTr, &buffer[0], bufferSize[0]);
                 if (resFFT != VKFFT_SUCCESS) return resFFT;
-#endif
-				shift += bufferSize[i];
+				resFFT = transferDataToCPU(vkGPU, output_VkFFTi, &buffer[1], bufferSize[1]);
+                if (resFFT != VKFFT_SUCCESS) return resFFT;
+			}else{
+				resFFT = transferDataToCPU(vkGPU, output_VkFFT, &buffer[0], bufferSize[0]);
+                if (resFFT != VKFFT_SUCCESS) return resFFT;
 			}
 			double avg_difference[2] = { 0,0 };
 			double max_difference[2] = { 0,0 };
@@ -299,7 +335,7 @@ VkFFTResult sample_11_precision_VkFFT_single(VkGPU* vkGPU, uint64_t file_output,
 
 						//if (file_output) fprintf(output, "%.2e %.2e - %.2e %.2e \n", output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][0] / N, output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][1] / N, output_VkFFT[(loc_i + loc_j * dims[0] + loc_l * dims[0] * dims[1])][0], output_VkFFT[(loc_i + loc_j * dims[0] + loc_l * dims[0] * dims[1])][1]);
 
-						//printf("%.2e %.2e - %.2e %.2e \n", output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][0], output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][1], output_VkFFT[(loc_i + loc_j * dims[0] + loc_l * dims[0] * dims[1])][0], output_VkFFT[(loc_i + loc_j * dims[0] + loc_l * dims[0] * dims[1])][1]);
+						//printf(" %.2e %.2e - %.2e %.2e \n", output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][0], output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][1], output_VkFFTr[offsetR/ sizeof(float) + (loc_i + loc_j * dims[0] + loc_l * dims[0] * dims[1])], output_VkFFTi[offsetI/ sizeof(float) + (loc_i + loc_j * dims[0] + loc_l * dims[0] * dims[1])]);
 						double current_data_norm = sqrt(output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][0] * output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][0] + output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][1] * output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][1]);
 #if defined(USE_cuFFT) || defined(USE_rocFFT)
 						double current_diff_x_extFFT = (output_extFFT[loc_i + loc_j * dims[0] + loc_l * dims[0] * dims[1]][0] - output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][0]);
@@ -313,8 +349,17 @@ VkFFTResult sample_11_precision_VkFFT_single(VkGPU* vkGPU, uint64_t file_output,
 						avg_eps[0] += current_diff_norm_extFFT / current_data_norm;
 #endif
 
-						double current_diff_x_VkFFT = (output_VkFFT[loc_i + loc_j * dims[0] + loc_l * dims[0] * dims[1]][0] - output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][0]);
-						double current_diff_y_VkFFT = (output_VkFFT[loc_i + loc_j * dims[0] + loc_l * dims[0] * dims[1]][1] - output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][1]);
+						double current_diff_x_VkFFT = 0;
+						double current_diff_y_VkFFT = 0;
+						if (configuration.bufferSeparateComplexComponents) {
+							current_diff_x_VkFFT = (output_VkFFTr[offsetR/ sizeof(float) + loc_i + loc_j * dims[0] + loc_l * dims[0] * dims[1]] - output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][0]);
+							current_diff_y_VkFFT = (output_VkFFTi[offsetI/ sizeof(float) + loc_i + loc_j * dims[0] + loc_l * dims[0] * dims[1]] - output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][1]);
+						}
+						else {
+							current_diff_x_VkFFT = (output_VkFFT[loc_i + loc_j * dims[0] + loc_l * dims[0] * dims[1]][0] - output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][0]);
+							current_diff_y_VkFFT = (output_VkFFT[loc_i + loc_j * dims[0] + loc_l * dims[0] * dims[1]][1] - output_FFTW[i + j * dims[0] + l * dims[0] * dims[1]][1]);
+						}
+						
 						double current_diff_norm_VkFFT = sqrt(current_diff_x_VkFFT * current_diff_x_VkFFT + current_diff_y_VkFFT * current_diff_y_VkFFT);
 						if (current_diff_norm_VkFFT > max_difference[1]) max_difference[1] = current_diff_norm_VkFFT;
 						avg_difference[1] += current_diff_norm_VkFFT;
@@ -343,24 +388,30 @@ VkFFTResult sample_11_precision_VkFFT_single(VkGPU* vkGPU, uint64_t file_output,
 				fprintf(output, "VkFFT System: %" PRIu64 "x%" PRIu64 "x%" PRIu64 " avg_difference: %.2e max_difference: %.2e avg_eps: %.2e max_eps: %.2e\n", dims[0], dims[1], dims[2], avg_difference[1], max_difference[1], avg_eps[1], max_eps[1]);
 			printf("VkFFT System: %" PRIu64 "x%" PRIu64 "x%" PRIu64 " avg_difference: %.2e max_difference: %.2e avg_eps: %.2e max_eps: %.2e\n", dims[0], dims[1], dims[2], avg_difference[1], max_difference[1], avg_eps[1], max_eps[1]);
 			free(output_VkFFT);
+			if (configuration.bufferSeparateComplexComponents) {
+				free(inputCr);
+				free(inputCi);
+				free(output_VkFFTr);
+				free(output_VkFFTi);
+			}
 			for (uint64_t i = 0; i < numBuf; i++) {
 #if(VKFFT_BACKEND==0)
 				vkDestroyBuffer(vkGPU->device, buffer[i], NULL);
 				vkFreeMemory(vkGPU->device, bufferDeviceMemory[i], NULL);
 #elif(VKFFT_BACKEND==1)
-				cudaFree(buffer);
+				cudaFree(buffer[i]);
 #elif(VKFFT_BACKEND==2)
-				hipFree(buffer);
+				hipFree(buffer[i]);
 #elif(VKFFT_BACKEND==3)
-				clReleaseMemObject(buffer);
+				clReleaseMemObject(buffer[i]);
 #elif(VKFFT_BACKEND==4)
-				zeMemFree(vkGPU->context, buffer);
+				zeMemFree(vkGPU->context, buffer[i]);
 #elif(VKFFT_BACKEND==5)
-                buffer->release();
+                buffer[i]->release();
 #endif
 			}
-#if(VKFFT_BACKEND==0)
 			free(buffer);
+#if(VKFFT_BACKEND==0)
 			free(bufferDeviceMemory);
 #endif
 #if defined(USE_cuFFT) || defined(USE_rocFFT)

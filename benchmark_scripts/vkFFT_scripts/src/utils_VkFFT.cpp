@@ -13,7 +13,7 @@
 
 #if(VKFFT_BACKEND==0)
 #include "vulkan/vulkan.h"
-#include "glslang_c_interface.h"
+#include "glslang/Include/glslang_c_interface.h"
 #elif(VKFFT_BACKEND==1)
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -114,16 +114,9 @@ std::vector<const char*> getRequiredExtensions(VkGPU* vkGPU, uint64_t sample_id)
 	if (vkGPU->enableValidationLayers) {
 		extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 	}
-	switch (sample_id) {
 #if (VK_API_VERSION>10)
-	case 2: case 102:
-		extensions.push_back("VK_KHR_get_physical_device_properties2");
-		break;
+	extensions.push_back("VK_KHR_get_physical_device_properties2");
 #endif
-	default:
-		break;
-	}
-
 
 	return extensions;
 }
@@ -243,22 +236,17 @@ VkResult createDevice(VkGPU* vkGPU, uint64_t sample_id) {
 	queueCreateInfo.pQueuePriorities = &queuePriorities;
 	VkDeviceCreateInfo deviceCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
 	VkPhysicalDeviceFeatures deviceFeatures = {};
+#if (VK_API_VERSION>10)
+	VkPhysicalDeviceFeatures2 deviceFeatures2 = {};
+	deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	void ** current_pNext = &deviceFeatures2.pNext;
+#endif
 	switch (sample_id) {
 	case 1: case 9: case 12: case 17: case 18: case 19: case 101: case 201: case 203: case 1001: case 1004: {
 		deviceFeatures.shaderFloat64 = true;
-		deviceCreateInfo.enabledExtensionCount = (uint32_t)vkGPU->enabledDeviceExtensions.size();
-		deviceCreateInfo.ppEnabledExtensionNames = vkGPU->enabledDeviceExtensions.data();
-		deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
-		deviceCreateInfo.queueCreateInfoCount = 1;
-		deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
-		res = vkCreateDevice(vkGPU->physicalDevice, &deviceCreateInfo, NULL, &vkGPU->device);
-		if (res != VK_SUCCESS) return res;
-		vkGetDeviceQueue(vkGPU->device, (uint32_t)vkGPU->queueFamilyIndex, 0, &vkGPU->queue);
-		break;
 	}
 #if (VK_API_VERSION>10)
-	case 2: case 102: case 202: case 1002: {
-		VkPhysicalDeviceFeatures2 deviceFeatures2 = {};
+	case 2: case 13: case 102: case 202: case 1002: {
 		VkPhysicalDevice16BitStorageFeatures shaderFloat16 = {};
 		shaderFloat16.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
 		shaderFloat16.storageBuffer16BitAccess = true;
@@ -266,36 +254,42 @@ VkResult createDevice(VkGPU* vkGPU, uint64_t sample_id) {
 		shaderFloat16.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES;
 		shaderFloat16.shaderFloat16 = true;
 		shaderFloat16.shaderInt8 = true;*/
-		deviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-		deviceFeatures2.pNext = &shaderFloat16;
-		deviceFeatures2.features = deviceFeatures;
-		vkGetPhysicalDeviceFeatures2(vkGPU->physicalDevice, &deviceFeatures2);
-		deviceCreateInfo.pNext = &deviceFeatures2;
+		current_pNext[0] = &shaderFloat16;
+		current_pNext = &shaderFloat16.pNext;
 		vkGPU->enabledDeviceExtensions.push_back("VK_KHR_16bit_storage");
-		deviceCreateInfo.enabledExtensionCount = (uint32_t)vkGPU->enabledDeviceExtensions.size();
-		deviceCreateInfo.ppEnabledExtensionNames = vkGPU->enabledDeviceExtensions.data();
-		deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
-		deviceCreateInfo.queueCreateInfoCount = 1;
-		deviceCreateInfo.pEnabledFeatures = NULL;
-		res = vkCreateDevice(vkGPU->physicalDevice, &deviceCreateInfo, NULL, &vkGPU->device);
-		if (res != VK_SUCCESS) return res;
-		vkGetDeviceQueue(vkGPU->device, (uint32_t)vkGPU->queueFamilyIndex, 0, &vkGPU->queue);
 		break;
 	}
 #endif
-	default: {
-		deviceCreateInfo.enabledExtensionCount = (uint32_t)vkGPU->enabledDeviceExtensions.size();
-		deviceCreateInfo.ppEnabledExtensionNames = vkGPU->enabledDeviceExtensions.data();
-		deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
-		deviceCreateInfo.queueCreateInfoCount = 1;
-		deviceCreateInfo.pEnabledFeatures = NULL;
-		deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
-		res = vkCreateDevice(vkGPU->physicalDevice, &deviceCreateInfo, NULL, &vkGPU->device);
-		if (res != VK_SUCCESS) return res;
-		vkGetDeviceQueue(vkGPU->device, (uint32_t)vkGPU->queueFamilyIndex, 0, &vkGPU->queue);
-		break;
 	}
+
+#if (VK_API_VERSION>10)
+	VkPhysicalDevicePushDescriptorPropertiesKHR pushDescriptorProperties = {};
+	pushDescriptorProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PUSH_DESCRIPTOR_PROPERTIES_KHR;
+	VkPhysicalDeviceProperties2KHR deviceProperties = {};
+	deviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
+	deviceProperties.pNext = &pushDescriptorProperties;
+	vkGetPhysicalDeviceProperties2(vkGPU->physicalDevice, &deviceProperties);
+
+	if (pushDescriptorProperties.maxPushDescriptors >= 8) {
+		current_pNext[0] = &pushDescriptorProperties;
+		current_pNext = &pushDescriptorProperties.pNext;
+		vkGPU->enabledDeviceExtensions.push_back("VK_KHR_push_descriptor");
 	}
+	deviceFeatures2.features = deviceFeatures;
+	vkGetPhysicalDeviceFeatures2(vkGPU->physicalDevice, &deviceFeatures2);
+	deviceCreateInfo.pNext = &deviceFeatures2;
+#endif
+
+	deviceCreateInfo.enabledExtensionCount = (uint32_t)vkGPU->enabledDeviceExtensions.size();
+	deviceCreateInfo.ppEnabledExtensionNames = vkGPU->enabledDeviceExtensions.data();
+	deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
+	deviceCreateInfo.queueCreateInfoCount = 1;
+#if (VK_API_VERSION==10)
+	deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
+#endif
+	res = vkCreateDevice(vkGPU->physicalDevice, &deviceCreateInfo, NULL, &vkGPU->device);
+	if (res != VK_SUCCESS) return res;
+	vkGetDeviceQueue(vkGPU->device, (uint32_t)vkGPU->queueFamilyIndex, 0, &vkGPU->queue);
 	return res;
 }
 VkResult createFence(VkGPU* vkGPU) {
@@ -357,6 +351,44 @@ VkFFTResult allocateBuffer(VkGPU* vkGPU, VkBuffer* buffer, VkDeviceMemory* devic
 	return resFFT;
 }
 #endif
+VkFFTResult allocateMemoryGPU(VkGPU* vkGPU, void** buffer, void** deviceMemoryVulkan, uint64_t bufferSize) {
+	VkFFTResult resFFT = VKFFT_SUCCESS;
+#if(VKFFT_BACKEND==0)
+	VkResult res = VK_SUCCESS;
+#elif(VKFFT_BACKEND==1)
+	cudaError_t res = cudaSuccess;
+#elif(VKFFT_BACKEND==2)
+	hipError_t res = hipSuccess;
+#elif(VKFFT_BACKEND==3)
+	cl_int res = CL_SUCCESS;
+#elif(VKFFT_BACKEND==4)
+	ze_result_t res = ZE_RESULT_SUCCESS;
+#elif(VKFFT_BACKEND==5)
+#endif
+#if(VKFFT_BACKEND==0)
+	resFFT = allocateBuffer(vkGPU, (VkBuffer*)buffer, (VkDeviceMemory*)deviceMemoryVulkan, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, bufferSize);
+	if (resFFT != VKFFT_SUCCESS) return resFFT;
+#elif(VKFFT_BACKEND==1)
+	res = cudaMalloc((void**)buffer, bufferSize);
+	if (res != cudaSuccess) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
+#elif(VKFFT_BACKEND==2)
+	res = hipMalloc((void**)buffer, bufferSize);
+	if (res != hipSuccess) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
+#elif(VKFFT_BACKEND==3)
+	cl_mem* buffer_ref = (cl_mem*)buffer;
+	buffer_ref[0] = clCreateBuffer(vkGPU->context, CL_MEM_READ_WRITE, bufferSize, 0, &res);
+	if (res != CL_SUCCESS) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
+#elif(VKFFT_BACKEND==4)
+	ze_device_mem_alloc_desc_t device_desc = {};
+	device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
+	res = zeMemAllocDevice(vkGPU->context, &device_desc, bufferSize, sizeof(float), vkGPU->device, buffer);
+	if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_ALLOCATE;
+#elif(VKFFT_BACKEND==5)
+    MTL::Buffer** buffer_ref = (MTL::Buffer**)buffer;
+    buffer_ref[0] = vkGPU->device->newBuffer(bufferSize, MTL::ResourceStorageModePrivate);
+#endif
+	return VKFFT_SUCCESS;
+}
 VkFFTResult transferDataToCPU(VkGPU* vkGPU, void* cpu_arr, void* output_buffer, uint64_t transferSize) {
 	//a function that transfers data from the GPU to the CPU using staging buffer, because the GPU memory is not host-coherent
 	VkFFTResult resFFT = VKFFT_SUCCESS;
@@ -761,6 +793,9 @@ VkFFTResult performVulkanFFT(VkGPU* vkGPU, VkFFTApplication* app, VkFFTLaunchPar
 	//Record commands num_iter times. Allows to perform multiple convolutions/transforms in one submit.
 	for (uint64_t i = 0; i < num_iter; i++) {
 		resFFT = VkFFTAppend(app, inverse, launchParams);
+		if (resFFT != VKFFT_SUCCESS) return resFFT;
+		launchParams->buffer = launchParams->kernel;
+		//resFFT = VkFFTAppend(app, inverse, launchParams);
 		if (resFFT != VKFFT_SUCCESS) return resFFT;
 	}
 	res = vkEndCommandBuffer(commandBuffer);

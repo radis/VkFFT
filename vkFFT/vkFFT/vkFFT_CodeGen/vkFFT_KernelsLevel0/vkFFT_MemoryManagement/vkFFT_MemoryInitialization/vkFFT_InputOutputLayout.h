@@ -37,23 +37,28 @@ static inline void appendLayoutVkFFT(VkFFTSpecializationConstantsLayout* sc) {
 static inline void appendInputLayoutVkFFT(VkFFTSpecializationConstantsLayout* sc, int id) {
 	if (sc->res != VKFFT_SUCCESS) return;
 	PfContainer* inputMemoryType;
-	PfGetTypeFromCode(sc, sc->inputMemoryCode, &inputMemoryType);
-	int typeSize = ((sc->inputMemoryCode % 10) == 3) ? sc->complexSize : sc->complexSize / 2;
+	int typeSize;
+	if(sc->inputBufferSeparateComplexComponents) {
+		PfGetTypeFromCode(sc, sc->floatTypeInputMemoryCode, &inputMemoryType);
+		typeSize = PfSizeTypeFromCode(sc, sc->floatTypeInputMemoryCode);
+	}	
+	else{
+		PfGetTypeFromCode(sc, sc->inputMemoryCode, &inputMemoryType);
+		typeSize =  PfSizeTypeFromCode(sc, sc->inputMemoryCode);
+	}
 #if(VKFFT_BACKEND==0)
 	if (sc->inputBufferBlockNum == 1) {
 		sc->tempLen = sprintf(sc->tempStr, "\
 layout(std430, binding = %d) buffer DataIn{\n\
-	%s inputs[];\n\
-};\n\n", id, inputMemoryType->name); // use runtime-sized arrays so that the same shader can be reused for different batch numbers
-
-
+	%s %s[%" PRIu64 "];\n\
+};\n\n", id, inputMemoryType->name, sc->inputsStruct.name, sc->inputBufferBlockSize / typeSize);
 		PfAppendLine(sc);
 	}
 	else {
 		sc->tempLen = sprintf(sc->tempStr, "\
 layout(std430, binding = %d) buffer DataIn{\n\
-	%s inputs[%" PRIu64 "];\n\
-} inputBlocks[%" PRIu64 "];\n\n", id, inputMemoryType->name, sc->inputBufferBlockSize / typeSize, sc->inputBufferBlockNum);
+	%s %s[%" PRIu64 "];\n\
+} %sBlocks[%" PRIu64 "];\n\n", id, inputMemoryType->name, sc->inputsStruct.name, sc->inputBufferBlockSize / typeSize, sc->inputsStruct.name, sc->inputBufferBlockNum);
 		PfAppendLine(sc);
 	}
 #elif(VKFFT_BACKEND==1)
@@ -66,23 +71,28 @@ layout(std430, binding = %d) buffer DataIn{\n\
 static inline void appendOutputLayoutVkFFT(VkFFTSpecializationConstantsLayout* sc, int id) {
 	if (sc->res != VKFFT_SUCCESS) return; 
 	PfContainer* outputMemoryType;
-	PfGetTypeFromCode(sc, sc->outputMemoryCode, &outputMemoryType);
-	int typeSize = ((sc->outputMemoryCode % 10) == 3) ? sc->complexSize : sc->complexSize / 2;
+	int typeSize;
+	if(sc->outputBufferSeparateComplexComponents) {
+		PfGetTypeFromCode(sc, sc->floatTypeOutputMemoryCode, &outputMemoryType);
+		typeSize = PfSizeTypeFromCode(sc, sc->floatTypeOutputMemoryCode);
+	}	
+	else{
+		PfGetTypeFromCode(sc, sc->outputMemoryCode, &outputMemoryType);
+		typeSize =  PfSizeTypeFromCode(sc, sc->outputMemoryCode);
+	}
 #if(VKFFT_BACKEND==0)
-	if (sc->inputBufferBlockNum == 1) {
+	if (sc->outputBufferBlockNum == 1) {
 		sc->tempLen = sprintf(sc->tempStr, "\
 layout(std430, binding = %d) buffer DataOut{\n\
-	%s outputs[];\n\
-};\n\n", id, outputMemoryType->name);  // use runtime-sized arrays so that the same shader can be reused for different batch numbers
-
-
-	PfAppendLine(sc);
+	%s %s[%" PRIu64 "];\n\
+};\n\n", id, outputMemoryType->name, sc->outputsStruct.name, sc->outputBufferBlockSize / typeSize);
+		PfAppendLine(sc);
 	}
 	else {
 		sc->tempLen = sprintf(sc->tempStr, "\
 layout(std430, binding = %d) buffer DataOut{\n\
-	%s outputs[%" PRIu64 "];\n\
-} outputBlocks[%" PRIu64 "];\n\n", id, outputMemoryType->name, sc->outputBufferBlockSize / typeSize, sc->outputBufferBlockNum);
+	%s %s[%" PRIu64 "];\n\
+} %sBlocks[%" PRIu64 "];\n\n", id, outputMemoryType->name, sc->outputsStruct.name, sc->outputBufferBlockSize / typeSize, sc->outputsStruct.name, sc->outputBufferBlockNum);
 		PfAppendLine(sc);
 	}
 #elif(VKFFT_BACKEND==1)
@@ -94,22 +104,29 @@ layout(std430, binding = %d) buffer DataOut{\n\
 }
 static inline void appendKernelLayoutVkFFT(VkFFTSpecializationConstantsLayout* sc, int id) {
 	if (sc->res != VKFFT_SUCCESS) return;
-	PfContainer* vecType;
-	PfGetTypeFromCode(sc, sc->vecTypeCode, &vecType);
-
+	PfContainer* kernelMemoryType;
+	int typeSize;
+	if(sc->kernelSeparateComplexComponents) {
+		PfGetTypeFromCode(sc, sc->floatTypeKernelMemoryCode, &kernelMemoryType);
+		typeSize = PfSizeTypeFromCode(sc, sc->floatTypeKernelMemoryCode);
+	}	
+	else{
+		PfGetTypeFromCode(sc, sc->vecTypeKernelMemoryCode, &kernelMemoryType);
+		typeSize = PfSizeTypeFromCode(sc, sc->vecTypeKernelMemoryCode);
+	}
 #if(VKFFT_BACKEND==0)
 	if (sc->kernelBlockNum == 1) {
 		sc->tempLen = sprintf(sc->tempStr, "\
 layout(std430, binding = %d) buffer Kernel_FFT{\n\
-	%s kernel_obj[%" PRIu64 "];\n\
-};\n\n", id, vecType->name, sc->kernelBlockSize / sc->complexSize);
+	%s %s[%" PRIu64 "];\n\
+};\n\n", id, kernelMemoryType->name, sc->kernelStruct.name, sc->kernelBlockSize / typeSize);
 		PfAppendLine(sc);
 	}
 	else {
 		sc->tempLen = sprintf(sc->tempStr, "\
 layout(std430, binding = %d) buffer Kernel_FFT{\n\
-	%s kernel_obj[%" PRIu64 "];\n\
-} kernelBlocks[%" PRIu64 "];\n\n", id, vecType->name, sc->kernelBlockSize / sc->complexSize, sc->kernelBlockNum);
+	%s %s[%" PRIu64 "];\n\
+} %sBlocks[%" PRIu64 "];\n\n", id, kernelMemoryType->name, sc->kernelStruct.name, sc->kernelBlockSize / typeSize, sc->kernelStruct.name, sc->kernelBlockNum);
 		PfAppendLine(sc);
 		
 	}
