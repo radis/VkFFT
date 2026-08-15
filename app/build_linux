@@ -1,0 +1,6 @@
+export SOURCE_PATH=/mnt/c/Users/dcmvd/Documents/GitHub/pyvkfft/src/vulkan
+export INCLUDE_PATH=/mnt/c/Users/dcmvd/Documents/GitHub/VkFFT
+export APP_PATH=/mnt/c/Users/dcmvd/Documents/GitHub/radis/radis/gpu/vulkan/bin
+export SHADERC_PATH=/usr/lib/x86_64-linux-gnu/
+g++ -shared "-Wl,--wrap=exp,--wrap=exp2,--wrap=log,--wrap=log2,--wrap=pow" -fPIC -I$INCLUDE_PATH/vkFFT -I/usr/include -I/usr/include/glslang/Include -I$SHADERC_PATH/third_party/glslang/glslang/Include -L/usr/lib/x86_64-linux-gnu $SOURCE_PATH/vkfft_vulkan.cpp -o $SOURCE_PATH/vkfft_vulkan.so -lvulkan -lshaderc_combined
+cp $SOURCE_PATH/vkfft_vulkan.so $APP_PATH/vkfft_vulkan.so
