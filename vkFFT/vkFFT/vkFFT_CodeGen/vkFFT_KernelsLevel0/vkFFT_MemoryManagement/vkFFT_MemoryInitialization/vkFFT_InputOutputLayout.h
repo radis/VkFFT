@@ -43,8 +43,10 @@ static inline void appendInputLayoutVkFFT(VkFFTSpecializationConstantsLayout* sc
 	if (sc->inputBufferBlockNum == 1) {
 		sc->tempLen = sprintf(sc->tempStr, "\
 layout(std430, binding = %d) buffer DataIn{\n\
-	%s inputs[%" PRIu64 "];\n\
-};\n\n", id, inputMemoryType->name, sc->inputBufferBlockSize / typeSize);
+	%s inputs[];\n\
+};\n\n", id, inputMemoryType->name); // use runtime-sized arrays so that the same shader can be reused for different batch numbers
+
+
 		PfAppendLine(sc);
 	}
 	else {
@@ -70,9 +72,11 @@ static inline void appendOutputLayoutVkFFT(VkFFTSpecializationConstantsLayout* s
 	if (sc->inputBufferBlockNum == 1) {
 		sc->tempLen = sprintf(sc->tempStr, "\
 layout(std430, binding = %d) buffer DataOut{\n\
-	%s outputs[%" PRIu64 "];\n\
-};\n\n", id, outputMemoryType->name, sc->outputBufferBlockSize / typeSize);
-		PfAppendLine(sc);
+	%s outputs[];\n\
+};\n\n", id, outputMemoryType->name);  // use runtime-sized arrays so that the same shader can be reused for different batch numbers
+
+
+	PfAppendLine(sc);
 	}
 	else {
 		sc->tempLen = sprintf(sc->tempStr, "\

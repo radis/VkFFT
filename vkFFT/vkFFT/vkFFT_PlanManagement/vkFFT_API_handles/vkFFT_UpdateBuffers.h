@@ -774,6 +774,17 @@ static inline VkFFTResult VkFFTCheckUpdateBufferSet(VkFFTApplication* app, VkFFT
 	return VKFFT_SUCCESS;
 }
 static inline VkFFTResult VkFFTUpdateBufferSet(VkFFTApplication* app, VkFFTPlan* FFTPlan, VkFFTAxis* axis, pfUINT axis_id, pfUINT axis_upload_id, pfUINT inverse) {
+	
+	ofstream myfile;
+	if (app->configuration.enableDebug){
+        const char* dname = app->configuration.debugName;
+        std::string fname = "";
+        fname += dname ;
+        fname += "_buffer_";
+        fname += std::to_string(app->debugUpdateCounter) + ".txt";
+        myfile.open(fname);
+        myfile << "FFT" <<endl;
+	}
 	if (axis->specializationConstants.performOffsetUpdate || axis->specializationConstants.performBufferSetUpdate) {
 		axis->specializationConstants.inputOffset.type = 31;
 		axis->specializationConstants.outputOffset.type = 31;
@@ -812,6 +823,9 @@ static inline VkFFTResult VkFFTUpdateBufferSet(VkFFTApplication* app, VkFFTPlan*
 							descriptorBufferInfo.buffer = app->configuration.inputBuffer[bufferId];
 							descriptorBufferInfo.range = (axis->specializationConstants.inputBufferBlockSize);
 							descriptorBufferInfo.offset = offset * (axis->specializationConstants.inputBufferBlockSize);
+                            if (app->configuration.enableDebug){
+                                myfile << "i = 0, IN0  - Range: " << descriptorBufferInfo.range << " , Offset: " << descriptorBufferInfo.offset <<endl; 
+                            }
 #endif
 						}
 						if (axis->specializationConstants.performOffsetUpdate) {
@@ -841,6 +855,10 @@ static inline VkFFTResult VkFFTUpdateBufferSet(VkFFTApplication* app, VkFFTPlan*
 								descriptorBufferInfo.buffer = app->configuration.outputBuffer[bufferId];
 								descriptorBufferInfo.range = (axis->specializationConstants.inputBufferBlockSize);
 								descriptorBufferInfo.offset = offset * (axis->specializationConstants.inputBufferBlockSize);
+								if (app->configuration.enableDebug){
+                                myfile << "i = 0, OUT(IN) - Range: " << descriptorBufferInfo.range << " , Offset: " << descriptorBufferInfo.offset <<endl; 
+                                }
+
 #endif
 							}
 							if (axis->specializationConstants.performOffsetUpdate) {
@@ -925,7 +943,11 @@ static inline VkFFTResult VkFFTUpdateBufferSet(VkFFTApplication* app, VkFFTPlan*
 #if(VKFFT_BACKEND==0)
 							if (axis->specializationConstants.performBufferSetUpdate) {
 								descriptorBufferInfo.range = (axis->specializationConstants.inputBufferBlockSize);
+								//descriptorBufferInfo.range = app->configuration.bufferSize[0];
 								descriptorBufferInfo.offset = offset * (axis->specializationConstants.inputBufferBlockSize);
+								if (app->configuration.enableDebug){
+                                myfile << "i = 0, IN1  - Range: " << descriptorBufferInfo.range << " , Offset: " << descriptorBufferInfo.offset <<endl; }
+
 							}
 #endif
 						}
@@ -966,6 +988,8 @@ static inline VkFFTResult VkFFTUpdateBufferSet(VkFFTApplication* app, VkFFTPlan*
 							descriptorBufferInfo.buffer = app->configuration.outputBuffer[bufferId];
 							descriptorBufferInfo.range = (axis->specializationConstants.outputBufferBlockSize);
 							descriptorBufferInfo.offset = offset * (axis->specializationConstants.outputBufferBlockSize);
+							if (app->configuration.enableDebug){
+                            myfile << "i = 1, OUT0 - Range: " << descriptorBufferInfo.range << " , Offset: " << descriptorBufferInfo.offset <<endl; }
 #endif
 						}
 						if (axis->specializationConstants.performOffsetUpdate) {
@@ -1103,7 +1127,11 @@ static inline VkFFTResult VkFFTUpdateBufferSet(VkFFTApplication* app, VkFFTPlan*
 #if(VKFFT_BACKEND==0)
 						if (axis->specializationConstants.performBufferSetUpdate) {
 							descriptorBufferInfo.range = (axis->specializationConstants.outputBufferBlockSize);
+							//descriptorBufferInfo.range = app->configuration.bufferSize[0];
 							descriptorBufferInfo.offset = offset * (axis->specializationConstants.outputBufferBlockSize);
+							if (app->configuration.enableDebug){
+                            myfile << "i = 1, OUT1 - Range: " << descriptorBufferInfo.range << " , Offset: " << descriptorBufferInfo.offset <<endl; }
+
 						}
 #endif
 					}
@@ -1195,9 +1223,24 @@ static inline VkFFTResult VkFFTUpdateBufferSet(VkFFTApplication* app, VkFFTPlan*
 	if (axis->specializationConstants.performOffsetUpdate) {
 		axis->specializationConstants.performOffsetUpdate = 0;
 	}
+    if (app->configuration.enableDebug){
+        myfile.close();}
+	app->debugUpdateCounter++;
 	return VKFFT_SUCCESS;
 }
 static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTApplication* app, VkFFTPlan* FFTPlan, VkFFTAxis* axis, pfUINT axis_id, pfUINT axis_upload_id, pfUINT inverse) {
+	
+    ofstream myfile;
+	if (app->configuration.enableDebug){
+        const char* dname = app->configuration.debugName;
+        std::string fname = "";
+        fname += dname ;
+        fname += "_buffer_";
+        fname += std::to_string(app->debugUpdateCounter) + ".txt";
+        myfile.open(fname);
+        myfile << "R2C" <<endl;
+    }
+	
 	if (axis->specializationConstants.performOffsetUpdate || axis->specializationConstants.performBufferSetUpdate) {
 #if(VKFFT_BACKEND==0)
 		const VkDescriptorType descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -1233,6 +1276,9 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 								descriptorBufferInfo.buffer = app->configuration.inputBuffer[bufferId];
 								descriptorBufferInfo.range = (axis->specializationConstants.inputBufferBlockSize);
 								descriptorBufferInfo.offset = offset * (axis->specializationConstants.inputBufferBlockSize);
+								if (app->configuration.enableDebug){
+                                myfile << "i = 0, IN100  - Range: " << descriptorBufferInfo.range << " , Offset: " << descriptorBufferInfo.offset <<endl; }
+
 #endif
 							}
 							if (axis->specializationConstants.performOffsetUpdate) {
@@ -1261,6 +1307,9 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 									descriptorBufferInfo.buffer = app->configuration.outputBuffer[bufferId];
 									descriptorBufferInfo.range = (axis->specializationConstants.inputBufferBlockSize);
 									descriptorBufferInfo.offset = offset * (axis->specializationConstants.inputBufferBlockSize);
+									if (app->configuration.enableDebug){
+                                    myfile << "i = 0, OUT(IN)100  - Range: " << descriptorBufferInfo.range << " , Offset: " << descriptorBufferInfo.offset <<endl; }
+
 #endif
 								}
 								if (axis->specializationConstants.performOffsetUpdate) {
@@ -1288,6 +1337,9 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 									descriptorBufferInfo.buffer = app->configuration.buffer[bufferId];
 									descriptorBufferInfo.range = (axis->specializationConstants.inputBufferBlockSize);
 									descriptorBufferInfo.offset = offset * (axis->specializationConstants.inputBufferBlockSize);
+									if (app->configuration.enableDebug){
+                                    myfile << "i = 0, IN101  - Range: " << descriptorBufferInfo.range << " , Offset: " << descriptorBufferInfo.offset <<endl; }
+
 #endif
 								}
 								if (axis->specializationConstants.performOffsetUpdate) {
@@ -1330,6 +1382,9 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 								descriptorBufferInfo.buffer = app->configuration.outputBuffer[bufferId];
 								descriptorBufferInfo.range = (axis->specializationConstants.outputBufferBlockSize);
 								descriptorBufferInfo.offset = offset * (axis->specializationConstants.outputBufferBlockSize);
+								if (app->configuration.enableDebug){
+                                myfile << "i = 0, OUT100 - Range: " << descriptorBufferInfo.range << " , Offset: " << descriptorBufferInfo.offset <<endl; }
+
 #endif
 							}
 							if (axis->specializationConstants.performOffsetUpdate) {
@@ -1357,6 +1412,9 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 								descriptorBufferInfo.buffer = app->configuration.buffer[bufferId];
 								descriptorBufferInfo.range = (axis->specializationConstants.outputBufferBlockSize);
 								descriptorBufferInfo.offset = offset * (axis->specializationConstants.outputBufferBlockSize);
+								if (app->configuration.enableDebug){
+                                myfile << "i = 0, OUT101 - Range: " << descriptorBufferInfo.range << " , Offset: " << descriptorBufferInfo.offset <<endl; }
+
 #endif
 							}
 							if (axis->specializationConstants.performOffsetUpdate) {
@@ -1388,6 +1446,9 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 								descriptorBufferInfo.buffer = app->configuration.outputBuffer[bufferId];
 								descriptorBufferInfo.range = (axis->specializationConstants.outputBufferBlockSize);
 								descriptorBufferInfo.offset = offset * (axis->specializationConstants.outputBufferBlockSize);
+								if (app->configuration.enableDebug){
+                                myfile << "i = 1, OUT102 - Range: " << descriptorBufferInfo.range << " , Offset: " << descriptorBufferInfo.offset <<endl; }
+
 #endif
 							}
 							if (axis->specializationConstants.performOffsetUpdate) {
@@ -1416,6 +1477,9 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 									descriptorBufferInfo.buffer = app->configuration.tempBuffer[bufferId];
 									descriptorBufferInfo.range = (axis->specializationConstants.outputBufferBlockSize);
 									descriptorBufferInfo.offset = offset * (axis->specializationConstants.outputBufferBlockSize);
+									if (app->configuration.enableDebug){
+                                    myfile << "i = 1, OUT103 - Range: " << descriptorBufferInfo.range << " , Offset: " << descriptorBufferInfo.offset <<endl; }
+
 #endif
 								}
 								if (axis->specializationConstants.performOffsetUpdate) {
@@ -1441,6 +1505,9 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 									descriptorBufferInfo.buffer = app->configuration.buffer[bufferId];
 									descriptorBufferInfo.range = (axis->specializationConstants.outputBufferBlockSize);
 									descriptorBufferInfo.offset = offset * (axis->specializationConstants.outputBufferBlockSize);
+									if (app->configuration.enableDebug){
+                                    myfile << "i = 1, OUT104 - Range: " << descriptorBufferInfo.range << " , Offset: " << descriptorBufferInfo.offset <<endl; }
+
 #endif
 								}
 								if (axis->specializationConstants.performOffsetUpdate) {
@@ -1483,6 +1550,9 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 								descriptorBufferInfo.buffer = app->configuration.outputBuffer[bufferId];
 								descriptorBufferInfo.range = (axis->specializationConstants.outputBufferBlockSize);
 								descriptorBufferInfo.offset = offset * (axis->specializationConstants.outputBufferBlockSize);
+								if (app->configuration.enableDebug){
+                                myfile << "i = 1, OUT105 - Range: " << descriptorBufferInfo.range << " , Offset: " << descriptorBufferInfo.offset <<endl; }
+
 #endif
 							}
 							if (axis->specializationConstants.performOffsetUpdate) {
@@ -1510,6 +1580,9 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 								descriptorBufferInfo.buffer = app->configuration.buffer[bufferId];
 								descriptorBufferInfo.range = (axis->specializationConstants.outputBufferBlockSize);
 								descriptorBufferInfo.offset = offset * (axis->specializationConstants.outputBufferBlockSize);
+								if (app->configuration.enableDebug){
+                                myfile << "i = 1, OUT106 - Range: " << descriptorBufferInfo.range << " , Offset: " << descriptorBufferInfo.offset <<endl; }
+
 #endif
 							}
 							if (axis->specializationConstants.performOffsetUpdate) {
@@ -1518,7 +1591,7 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 						}
 					}
 				}
-				if ((i == 2) && (app->configuration.performConvolution)) {
+				if ((i == 2) && (app->configuration.performConvolution)) { //axis->specializationConstants.convolutionBindingID
 					if (axis->specializationConstants.performBufferSetUpdate) {
 						pfUINT bufferId = 0;
 						pfUINT offset = j;
@@ -1538,13 +1611,14 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 						descriptorBufferInfo.buffer = app->configuration.kernel[bufferId];
 						descriptorBufferInfo.range = (axis->specializationConstants.kernelBlockSize);
 						descriptorBufferInfo.offset = offset * (axis->specializationConstants.kernelBlockSize);
+						
 #endif
 					}
 					if (axis->specializationConstants.performOffsetUpdate) {
 						axis->specializationConstants.kernelOffset.data.i = app->configuration.kernelOffset;
 					}
 				}
-				if ((i == axis->numBindings - 1) && (app->configuration.useLUT == 1)) {
+				if ((i == axis->numBindings - 1) && (app->configuration.useLUT == 1)) { //axis->specializationConstants.LUTBindingID
 #if(VKFFT_BACKEND==0)
 					if (axis->specializationConstants.performBufferSetUpdate) {
 						descriptorBufferInfo.buffer = axis->bufferLUT;
@@ -1574,6 +1648,10 @@ static inline VkFFTResult VkFFTUpdateBufferSetR2CMultiUploadDecomposition(VkFFTA
 	if (axis->specializationConstants.performOffsetUpdate) {
 		axis->specializationConstants.performOffsetUpdate = 0;
 	}
+	if (app->configuration.enableDebug){
+        myfile.close();
+    }
+	app->debugUpdateCounter++;
 	return VKFFT_SUCCESS;
 }
 

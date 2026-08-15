@@ -150,6 +150,9 @@ typedef struct {
 	VkBuffer* inputBuffer;//pointer to array of input buffers (or one buffer) used to read data from if isInputFormatted is enabled
 	VkBuffer* outputBuffer;//pointer to array of output buffers (or one buffer) used for write data to if isOutputFormatted is enabled
 	VkBuffer* kernel;//pointer to array of kernel buffers (or one buffer) used for read kernel data from if performConvolution is enabled
+	VkBuffer indirectBuffer;
+	unsigned int* indirectHostPointer;
+	
 #elif(VKFFT_BACKEND==1)
 	void** buffer;//pointer to device buffer used for computations
 	void** tempBuffer;//needed if reorderFourStep is enabled to transpose the array. Same size as buffer. Default 0. Setting to non zero value enables manual user allocation
@@ -186,6 +189,7 @@ typedef struct {
 	pfUINT inputBufferOffset;//specify if VkFFT has to offset the first element position inside the input buffer. In bytes. Default 0 
 	pfUINT outputBufferOffset;//specify if VkFFT has to offset the first element position inside the output buffer. In bytes. Default 0
 	pfUINT kernelOffset;//specify if VkFFT has to offset the first element position inside the kernel. In bytes. Default 0
+	pfUINT indirectBufferOffset;
 	pfUINT specifyOffsetsAtLaunch;//specify if offsets will be selected with launch parameters VkFFTLaunchParams (0 - off, 1 - on). Default 0
 
 	//optional: (default 0 if not stated otherwise)
@@ -321,6 +325,9 @@ typedef struct {
 	MTL::CommandBuffer* commandBuffer;//Filled at app execution
 	MTL::ComputeCommandEncoder* commandEncoder;//Filled at app execution
 #endif
+    pfUINT indirectDispatch; //0 for direct, 1 for fwd indirect, 2 for inv indirec, 3 for both
+	const char* debugName;
+	pfUINT enableDebug;
 } VkFFTConfiguration;//parameters specified at plan creation
 
 typedef struct {
@@ -1113,6 +1120,7 @@ typedef struct {
 	pfUINT bufferLUTSize;
 	pfUINT bufferRaderUintLUTSize;
 	pfUINT referenceLUT;
+    pfUINT batchWorkGroup;
 } VkFFTAxis;
 
 typedef struct {
@@ -1177,7 +1185,7 @@ typedef struct {
 	pfUINT bufferBluesteinSize[VKFFT_MAX_FFT_DIMENSIONS];
 	void* applicationBluesteinString[VKFFT_MAX_FFT_DIMENSIONS];
 	pfUINT applicationBluesteinStringSize[VKFFT_MAX_FFT_DIMENSIONS];
-
+	pfUINT indirectDispatchID;
 	pfUINT numRaderFFTPrimes;
 	pfUINT rader_primes[30];
 	pfUINT rader_buffer_size[30];
@@ -1188,6 +1196,8 @@ typedef struct {
 
 	pfUINT applicationStringSize;//size of saveApplicationString in bytes
 	void* saveApplicationString;//memory array(uint32_t* for Vulkan, char* for CUDA/HIP/OpenCL) through which user can access VkFFT generated binaries. (will be allocated by VkFFT, deallocated with deleteVkFFT call)
+	pfUINT debugKernelCounter;
+	pfUINT debugUpdateCounter;
 } VkFFTApplication;
 
 #endif
