@@ -143,15 +143,13 @@ typedef struct {
 	pfUINT* inputBufferSize;//array of input buffers sizes in bytes, if isInputFormatted is enabled
 	pfUINT* outputBufferSize;//array of output buffers sizes in bytes, if isOutputFormatted is enabled
 	pfUINT* kernelSize;//array of kernel buffers sizes in bytes, if performConvolution is enabled
-	pfUINT currentBatchUBOSize; //size of the uniform buffer containing the number of batches to perform. Set to 4 if dynamicBatch=1 and set to 8 if dynamicBatch=2.
-  
+
 #if(VKFFT_BACKEND==0)
 	VkBuffer* buffer;//pointer to array of buffers (or one buffer) used for computations
 	VkBuffer* tempBuffer;//needed if reorderFourStep is enabled to transpose the array. Same sum size or bigger as buffer (can be split in multiple). Default 0. Setting to non zero value enables manual user allocation
 	VkBuffer* inputBuffer;//pointer to array of input buffers (or one buffer) used to read data from if isInputFormatted is enabled
 	VkBuffer* outputBuffer;//pointer to array of output buffers (or one buffer) used for write data to if isOutputFormatted is enabled
 	VkBuffer* kernel;//pointer to array of kernel buffers (or one buffer) used for read kernel data from if performConvolution is enabled
-	VkBuffer currentBatchUBO; //uniform buffer that contains the number of batches to perform when dynamicBatch >= 1.
 	VkBuffer indirectBuffer;
 	unsigned int* indirectHostPointer;
 	
@@ -191,7 +189,6 @@ typedef struct {
 	pfUINT inputBufferOffset;//specify if VkFFT has to offset the first element position inside the input buffer. In bytes. Default 0 
 	pfUINT outputBufferOffset;//specify if VkFFT has to offset the first element position inside the output buffer. In bytes. Default 0
 	pfUINT kernelOffset;//specify if VkFFT has to offset the first element position inside the kernel. In bytes. Default 0
-	pfUINT currentBatchUBOOffset; //byte offset of the number of batches in the within the currentBatchUBO
 	pfUINT indirectBufferOffset;
 	pfUINT specifyOffsetsAtLaunch;//specify if offsets will be selected with launch parameters VkFFTLaunchParams (0 - off, 1 - on). Default 0
 
@@ -328,7 +325,6 @@ typedef struct {
 	MTL::CommandBuffer* commandBuffer;//Filled at app execution
 	MTL::ComputeCommandEncoder* commandEncoder;//Filled at app execution
 #endif
-	pfUINT dynamicBatch; //set to 1 to dynamically limit the number of batches using the currentBatchUBO buffer. set to 2 for different numbers for fwd and inv.
     pfUINT indirectDispatch; //0 for direct, 1 for fwd indirect, 2 for inv indirec, 3 for both
 	const char* debugName;
 	pfUINT enableDebug;
@@ -826,7 +822,6 @@ typedef struct {
 	
 	int swapComputeWorkGroupID;
 	int convolutionStep;
-	int dynamicBatch;
 	int symmetricKernel;
 	int supportAxis;
 	int cacheShuffle;
@@ -848,7 +843,6 @@ typedef struct {
 	int forceCallbackVersionRealTransforms;
 
 	int numBuffersBound[10];
-	int currentBatchBindingID;
 	int convolutionBindingID;
 	int LUTBindingID;
 	int BluesteinConvolutionBindingID;
@@ -1011,7 +1005,6 @@ typedef struct {
 	//int outputType;
 	PfContainer inputsStruct;
 	PfContainer outputsStruct;
-	PfContainer batchStruct;
 	PfContainer kernelStruct;
 	PfContainer sdataStruct;
 	PfContainer LUTStruct;

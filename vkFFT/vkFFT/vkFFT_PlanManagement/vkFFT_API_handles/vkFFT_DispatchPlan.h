@@ -25,10 +25,6 @@
 
 static inline VkFFTResult VkFFT_DispatchPlan(VkFFTApplication* app, VkFFTAxis* axis, pfUINT* dispatchBlock) {
 	VkFFTResult resFFT = VKFFT_SUCCESS;
-	
-	
-
-	
 	if (axis->specializationConstants.swapComputeWorkGroupID == 1) {
 		pfUINT temp = dispatchBlock[0];
 		dispatchBlock[0] = dispatchBlock[1];
@@ -58,11 +54,10 @@ static inline VkFFTResult VkFFT_DispatchPlan(VkFFTApplication* app, VkFFTAxis* a
 	if (app->configuration.specifyOffsetsAtLaunch) {
 		axis->updatePushConstants = 1;
 	}
-
 	//printf("%" PRIu64 " %" PRIu64 " %" PRIu64 "\n", dispatchBlock[0], dispatchBlock[1], dispatchBlock[2]);
 	//printf("%" PRIu64 " %" PRIu64 " %" PRIu64 "\n", blockNumber[0], blockNumber[1], blockNumber[2]);
 	for (pfUINT i = 0; i < 3; i++)
-		if (blockNumber[i] == 1) blockSize[i] = dispatchBlock[i];	
+		if (blockNumber[i] == 1) blockSize[i] = dispatchBlock[i];
 	for (pfUINT i = 0; i < blockNumber[0]; i++) {
 		for (pfUINT j = 0; j < blockNumber[1]; j++) {
 			for (pfUINT k = 0; k < blockNumber[2]; k++) {
@@ -112,11 +107,6 @@ static inline VkFFTResult VkFFT_DispatchPlan(VkFFTApplication* app, VkFFTAxis* a
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(pfUINT));
 							offset += sizeof(pfUINT);
 						}
-						// if (axis->specializationConstants.performPostCompilationCurrentBatch) {
-							// temp = axis->specializationConstants.currentBatch.data.i;
-							// memcpy(&axis->pushConstants.data[offset], &temp, sizeof(pfUINT));
-							// offset += sizeof(pfUINT);
-						// }
 					}
 					else {
 						pfUINT offset = 0;
@@ -154,11 +144,6 @@ static inline VkFFTResult VkFFT_DispatchPlan(VkFFTApplication* app, VkFFTAxis* a
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint32_t));
 							offset += sizeof(uint32_t);
 						}
-						// if (axis->specializationConstants.performPostCompilationCurrentBatch) {
-							// temp = (uint32_t)(axis->specializationConstants.currentBatch.data.i);
-							// memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint32_t));
-							// offset += sizeof(uint32_t);
-						// }
 					}
 				}
 				dispatchSize[0] = (i == blockNumber[0] - 1) ? lastBlockSize[0] : blockSize[0];

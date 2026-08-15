@@ -61,8 +61,6 @@ static inline void appendVersion(VkFFTSpecializationConstantsLayout* sc) {
 #endif
 	return;
 }
-
-
 static inline void appendExtensions(VkFFTSpecializationConstantsLayout* sc) {
 	if (sc->res != VKFFT_SUCCESS) return;
 #if(VKFFT_BACKEND==0)
@@ -78,10 +76,6 @@ static inline void appendExtensions(VkFFTSpecializationConstantsLayout* sc) {
 	}
 	if ((((sc->floatTypeInputMemoryCode / 10) % 10) == 0) || (((sc->floatTypeOutputMemoryCode / 10) % 10) == 0) || (((sc->floatTypeCode / 10) % 10) == 0)) {
 		sc->tempLen = sprintf(sc->tempStr, "#extension GL_EXT_shader_16bit_storage : require\n\n");
-		PfAppendLine(sc);
-	}
-	if (sc->dynamicBatch) { //Allow for std430 uniform blocks
-		sc->tempLen = sprintf(sc->tempStr, "#extension GL_EXT_scalar_block_layout : enable\n\n");
 		PfAppendLine(sc);
 	}
 #elif(VKFFT_BACKEND==1)

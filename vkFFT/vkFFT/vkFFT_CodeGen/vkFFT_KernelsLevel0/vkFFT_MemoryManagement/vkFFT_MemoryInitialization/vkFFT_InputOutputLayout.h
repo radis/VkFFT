@@ -92,36 +92,6 @@ layout(std430, binding = %d) buffer DataOut{\n\
 #endif
 	return;
 }
-
-static inline void appendCurrentBatchVkFFT(VkFFTSpecializationConstantsLayout* sc, int id) {
-	if (sc->res != VKFFT_SUCCESS) return; 
-	PfContainer* uintType32;
-	PfGetTypeFromCode(sc, sc->uintType32Code, &uintType32);
-
-#if(VKFFT_BACKEND==0)
-	if (sc->dynamicBatch==1){
-		sc->tempLen = sprintf(sc->tempStr, "\
-layout(std430, binding = %d) uniform UniformBufferObject{\n\
-	%s N;\n\
-	} currentBatch;\n\n", id, uintType32->name);
-	}
-	else if (sc->dynamicBatch==2){
-		sc->tempLen = sprintf(sc->tempStr, "\
-layout(std430, binding = %d) uniform UniformBufferObject{\n\
-	%s Nfwd;\n\
-	%s Ninv;\n\
-	} currentBatch;\n\n", id, uintType32->name, uintType32->name);
-	}
-	PfAppendLine(sc);
-	
-#elif(VKFFT_BACKEND==1)
-#elif(VKFFT_BACKEND==2)
-#elif((VKFFT_BACKEND==3)||(VKFFT_BACKEND==4))
-#elif(VKFFT_BACKEND==5)
-#endif
-	return;
-}
-
 static inline void appendKernelLayoutVkFFT(VkFFTSpecializationConstantsLayout* sc, int id) {
 	if (sc->res != VKFFT_SUCCESS) return;
 	PfContainer* vecType;
