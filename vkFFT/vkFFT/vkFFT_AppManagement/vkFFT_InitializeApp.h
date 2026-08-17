@@ -972,6 +972,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 		app->configuration.indirectBufferOffset = inputLaunchConfiguration.indirectBufferOffset;
 		app->configuration.indirectHostPointer = inputLaunchConfiguration.indirectHostPointer;
 	}
+	app->configuration.enableDebug = inputLaunchConfiguration.enableDebug;
 	if (inputLaunchConfiguration.debugName != nullptr) app->configuration.debugName = inputLaunchConfiguration.debugName;
 	app->debugKernelCounter = 0;
 	app->debugUpdateCounter = 0;
