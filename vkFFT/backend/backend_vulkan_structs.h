@@ -1,6 +1,6 @@
 
-#ifndef VKFFT_BACKEND_H
-#define VKFFT_BACKEND_H
+#ifndef VKFFT_BACKEND_STRUCTS_H
+#define VKFFT_BACKEND_STRUCTS_H
 
 #include "vulkan/vulkan.h"
 #include "glslang/Include/glslang_c_interface.h"
@@ -68,4 +68,4 @@ typedef VkBuffer backendVkFFTBuffer;
 
 
 
-#endif //VKFFT_BACKEND_H
+#endif //VKFFT_BACKEND_STRUCTS_H

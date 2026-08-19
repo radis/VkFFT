@@ -1,6 +1,6 @@
 
-#ifndef VKFFT_BACKEND_H
-#define VKFFT_BACKEND_H
+#ifndef VKFFT_BACKEND_STRUCTS_H
+#define VKFFT_BACKEND_STRUCTS_H
 
 #ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
@@ -52,4 +52,4 @@ typedef cl_mem backendVkFFTBuffer;
 
 
 
-#endif //VKFFT_BACKEND_H
+#endif //VKFFT_BACKEND_STRUCTS_H

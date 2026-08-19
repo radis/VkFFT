@@ -1,6 +1,6 @@
 
-#ifndef VKFFT_BACKEND_H
-#define VKFFT_BACKEND_H
+#ifndef VKFFT_BACKEND_STRUCTS_H
+#define VKFFT_BACKEND_STRUCTS_H
 
 #define NS_PRIVATE_IMPLEMENTATION
 #define CA_PRIVATE_IMPLEMENTATION
@@ -53,4 +53,4 @@ typedef MTL::Buffer* backendVkFFTBuffer;
 
 
 
-#endif //VKFFT_BACKEND_H
+#endif //VKFFT_BACKEND_STRUCTS_H

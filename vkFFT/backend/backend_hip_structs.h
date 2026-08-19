@@ -1,6 +1,6 @@
 
-#ifndef VKFFT_BACKEND_H
-#define VKFFT_BACKEND_H
+#ifndef VKFFT_BACKEND_STRUCTS_H
+#define VKFFT_BACKEND_STRUCTS_H
 
 #include <hip/hiprtc.h>
 #include <hip/hip_runtime.h>
@@ -54,4 +54,4 @@ typedef void* backendVkFFTBuffer;
 
 
 
-#endif //VKFFT_BACKEND_H
+#endif //VKFFT_BACKEND_STRUCTS_H

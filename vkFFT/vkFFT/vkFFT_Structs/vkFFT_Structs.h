@@ -33,18 +33,15 @@
 #endif
 #include <inttypes.h>
 
-#if(VKFFT_BACKEND==0)
-#include "../../backend/backend_vulkan_structs.h"
-#elif(VKFFT_BACKEND==1)
-#include "../../backend/backend_cuda_structs.h"
-#elif(VKFFT_BACKEND==2)
-#include "../../backend/backend_hip_structs.h"
-#elif(VKFFT_BACKEND==3)
-#include "../../backend/backend_opencl_structs.h"
-#elif(VKFFT_BACKEND==4)
-#include "../../backend/backend_zero_structs.h"
-#elif(VKFFT_BACKEND==5)
-#include "../../backend/backend_metal_structs.h"
+#ifndef VKFFT_BACKEND_STRUCTS_H
+#define VKFFT_BACKEND_FFT_CONFIGURATION
+#define VKFFT_BACKEND_LAUNCH_PARAMS
+#define VKFFT_BACKEND_SPEC_CONST_LAYOUT
+#define VKFFT_BACKEND_PUSH_CONST_LAYOUT
+#define VKFFT_BACKEND_AXIS
+#define VKFFT_BACKEND_APPLICATION
+typedef void* const backendVkFFTConstBuffer;
+typedef void* backendVkFFTBuffer;
 #endif
 
 #ifdef VKFFT_USE_QUADMATH_FP128
