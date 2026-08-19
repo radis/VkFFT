@@ -179,6 +179,16 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 				(const glslang_resource_t*)&default_resource,
 			};
 						
+		// if (app->configuration.enableDebug){
+
+			// myfile2 << app->configuration.debugName;
+			// myfile2 << " kernel " << app->debugKernelCounter <<"\n";
+			// myfile2 << "##################################\n";
+			//myfile2 << code0 <<"\n\n";
+			
+			// app->debugKernelCounter++;
+			// }
+		
 		if (app->configuration.enableDebug){
 			const char* dname = app->configuration.debugName;
 			ofstream myfile;
@@ -194,7 +204,6 @@ static inline VkFFTResult VkFFT_CompileKernel(VkFFTApplication* app, VkFFTAxis* 
 			myfile.close();
 			app->debugKernelCounter++;
 			}
-		
 		
 		//printf("%s\n", code0);
 		glslang_shader_t* shader = glslang_shader_create((const glslang_input_t*)&input);
