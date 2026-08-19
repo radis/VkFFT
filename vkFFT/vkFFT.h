@@ -33,32 +33,19 @@
 #define __STDC_FORMAT_MACROS
 #endif
 #include <inttypes.h>
+
 #if(VKFFT_BACKEND==0)
-#include "vulkan/vulkan.h"
-#include "glslang/Include/glslang_c_interface.h"
+#include "backend/backend_vulkan.h"
 #elif(VKFFT_BACKEND==1)
-#include <nvrtc.h>
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include <cuda_runtime_api.h>
-#include <cuComplex.h>
-#ifndef CUDA_TOOLKIT_ROOT_DIR
-#define CUDA_TOOLKIT_ROOT_DIR ""
-#endif
+#include "backend/backend_cuda.h"
 #elif(VKFFT_BACKEND==2)
-#include <hip/hiprtc.h>
-#include <hip/hip_runtime.h>
-#include <hip/hip_runtime_api.h>
-#include <hip/hip_complex.h>
+#include "backend/backend_hip.h"
 #elif(VKFFT_BACKEND==3)
-#ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
-#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
-#endif
-#ifdef __APPLE__
-#include <OpenCL/opencl.h>
-#else
-#include <CL/cl.h>
-#endif
+#include "backend/backend_opencl.h"
+#elif(VKFFT_BACKEND==4)
+#include "backend/backend_zero.h"
+#elif(VKFFT_BACKEND==5)
+#include "backend/backend_metal.h"
 #endif
 
 #ifdef __cplusplus
