@@ -465,672 +465,11 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 		}
 	}
 	//set device parameters
-#if(VKFFT_BACKEND==0)
-	if (!inputLaunchConfiguration.isCompilerInitialized) {
-		if (!app->configuration.isCompilerInitialized) {
-			int resGlslangInitialize = glslang_initialize_process();
-			if (!resGlslangInitialize) return VKFFT_ERROR_FAILED_TO_INITIALIZE;
-			app->configuration.isCompilerInitialized = 1;
-		}
-	}
-	if (inputLaunchConfiguration.physicalDevice == 0) {
+	resFFT = setConfigurationVkFFT_backendSetDeviceParams(app, inputLaunchConfiguration);
+	if (resFFT != VKFFT_SUCCESS) {
 		deleteVkFFT(app);
-		return VKFFT_ERROR_INVALID_PHYSICAL_DEVICE;
+		return resFFT;
 	}
-	app->configuration.physicalDevice = (VkPhysicalDevice*)calloc(1,sizeof(VkPhysicalDevice));
-	if (!app->configuration.physicalDevice) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_MALLOC_FAILED;
-	}
-	else {
-		app->configuration.physicalDevice[0] = inputLaunchConfiguration.physicalDevice[0];
-	}
-
-	if (inputLaunchConfiguration.device == 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_INVALID_DEVICE;
-	}
-	app->configuration.device = (VkDevice*)calloc(1, sizeof(VkDevice));
-	if (!app->configuration.device) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_MALLOC_FAILED;
-	}
-	else {
-		app->configuration.device[0] = inputLaunchConfiguration.device[0];
-	}
-
-	if (inputLaunchConfiguration.queue == 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_INVALID_QUEUE;
-	}
-	app->configuration.queue = (VkQueue*)calloc(1, sizeof(VkQueue));
-	if (!app->configuration.queue) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_MALLOC_FAILED;
-	}
-	else {
-		app->configuration.queue[0] = inputLaunchConfiguration.queue[0];
-	}
-
-	if (inputLaunchConfiguration.commandPool == 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_INVALID_COMMAND_POOL;
-	}
-	app->configuration.commandPool = (VkCommandPool*)calloc(1, sizeof(VkCommandPool));
-	if (!app->configuration.commandPool) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_MALLOC_FAILED;
-	}
-	else {
-		app->configuration.commandPool[0] = inputLaunchConfiguration.commandPool[0];
-	}
-
-	if (inputLaunchConfiguration.fence == 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_INVALID_FENCE;
-	}
-	app->configuration.fence = (VkFence*)calloc(1, sizeof(VkFence));
-	if (!app->configuration.fence) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_MALLOC_FAILED;
-	}
-	else {
-		app->configuration.fence[0] = inputLaunchConfiguration.fence[0];
-	}
-
-	app->configuration.usePushDescriptors = inputLaunchConfiguration.usePushDescriptors;
-
-	VkPhysicalDeviceProperties physicalDeviceProperties = { 0 };
-	vkGetPhysicalDeviceProperties(app->configuration.physicalDevice[0], &physicalDeviceProperties);
-	app->configuration.maxThreadsNum = physicalDeviceProperties.limits.maxComputeWorkGroupInvocations;
-	if (physicalDeviceProperties.vendorID == 0x8086) app->configuration.maxThreadsNum = 256; //Intel fix
-	app->configuration.maxComputeWorkGroupCount[0] = physicalDeviceProperties.limits.maxComputeWorkGroupCount[0];
-	app->configuration.maxComputeWorkGroupCount[1] = physicalDeviceProperties.limits.maxComputeWorkGroupCount[1];
-	app->configuration.maxComputeWorkGroupCount[2] = physicalDeviceProperties.limits.maxComputeWorkGroupCount[2];
-	app->configuration.maxComputeWorkGroupSize[0] = physicalDeviceProperties.limits.maxComputeWorkGroupSize[0];
-	app->configuration.maxComputeWorkGroupSize[1] = physicalDeviceProperties.limits.maxComputeWorkGroupSize[1];
-	app->configuration.maxComputeWorkGroupSize[2] = physicalDeviceProperties.limits.maxComputeWorkGroupSize[2];
-	//if ((physicalDeviceProperties.vendorID == 0x8086) && (!app->configuration.doublePrecision) && (!app->configuration.doublePrecisionFloatMemory)) app->configuration.halfThreads = 1;
-	app->configuration.sharedMemorySize = physicalDeviceProperties.limits.maxComputeSharedMemorySize;
-	app->configuration.vendorID = physicalDeviceProperties.vendorID;
-	if (inputLaunchConfiguration.pipelineCache != 0) {
-		app->configuration.pipelineCache = (VkPipelineCache*)calloc(1,sizeof(VkPipelineCache));
-		if (!app->configuration.pipelineCache) {
-			deleteVkFFT(app);
-			return VKFFT_ERROR_MALLOC_FAILED;
-		}
-		else {
-			app->configuration.pipelineCache[0] = inputLaunchConfiguration.pipelineCache[0];
-		}
-	}
-	app->configuration.useRaderUintLUT = 1;
-	switch (physicalDeviceProperties.vendorID) {
-	case 0x10DE://NVIDIA
-		app->configuration.coalescedMemory = (app->configuration.halfPrecision) ? 64 : 32;//the coalesced memory is equal to 32 bytes between L2 and VRAM.
-		app->configuration.useLUT = (app->configuration.doublePrecision || app->configuration.doublePrecisionFloatMemory || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 1 : -1;
-		app->configuration.warpSize = 32;
-		app->configuration.registerBoostNonPow2 = 0;
-		app->configuration.registerBoost = 4;
-		app->configuration.registerBoost4Step = 1;
-		app->configuration.reorderFourStep = 2;
-		app->configuration.swapTo3Stage4Step = (app->configuration.doublePrecision) ? 4194305 : 4194305;
-		break;
-	case 0x8086://INTEL
-		app->configuration.coalescedMemory = (app->configuration.halfPrecision) ? 128 : 64;
-		app->configuration.useLUT = 1;
-		app->configuration.warpSize = 32;
-		app->configuration.registerBoostNonPow2 = 0;
-		app->configuration.registerBoost = (physicalDeviceProperties.limits.maxComputeSharedMemorySize >= 65536) ? 1 : 2;
-		app->configuration.registerBoost4Step = 1;
-		app->configuration.reorderFourStep = 1;
-		app->configuration.swapTo3Stage4Step = (app->configuration.doublePrecision || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 262144 : 524288;
-		break;
-	case 0x1002://AMD
-		app->configuration.coalescedMemory = (app->configuration.halfPrecision) ? 64 : 32;
-		app->configuration.useLUT = (app->configuration.doublePrecision || app->configuration.doublePrecisionFloatMemory || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 1 : -1;
-		app->configuration.warpSize = 64;
-		app->configuration.registerBoostNonPow2 = 0;
-		app->configuration.registerBoost = (physicalDeviceProperties.limits.maxComputeSharedMemorySize >= 65536) ? 2 : 4;
-		app->configuration.registerBoost4Step = 1;
-		app->configuration.reorderFourStep = 3;
-		app->configuration.swapTo3Stage4Step = (app->configuration.doublePrecision || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 262144 : 524288;
-		app->configuration.optimizePow2StridesTempBuffer = 2;
-		break;
-	default:
-		app->configuration.coalescedMemory = (app->configuration.halfPrecision) ? 128 : 64;
-		app->configuration.useLUT = (app->configuration.doublePrecision || app->configuration.doublePrecisionFloatMemory || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 1 : -1;
-		app->configuration.warpSize = 32;
-		app->configuration.registerBoostNonPow2 = 0;
-		app->configuration.registerBoost = 1;
-		app->configuration.registerBoost4Step = 1;
-		app->configuration.reorderFourStep = 1;
-		app->configuration.swapTo3Stage4Step = (app->configuration.doublePrecision || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 262144 : 524288;
-		break;
-	}
-#elif(VKFFT_BACKEND==1)
-	CUresult res = CUDA_SUCCESS;
-	cudaError_t res_t = cudaSuccess;
-	if (inputLaunchConfiguration.device == 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_INVALID_DEVICE;
-	}
-	app->configuration.device = (CUdevice*)calloc(1, sizeof(CUdevice));
-	if (!app->configuration.device) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_MALLOC_FAILED;
-	}
-	else {
-		app->configuration.device[0] = inputLaunchConfiguration.device[0];
-	}
-
-	if (inputLaunchConfiguration.num_streams != 0) {
-		app->configuration.num_streams = inputLaunchConfiguration.num_streams;
-		if (inputLaunchConfiguration.stream != 0) {
-			app->configuration.stream = (cudaStream_t*)calloc(app->configuration.num_streams, sizeof(cudaStream_t));
-			if (!app->configuration.stream) {
-				deleteVkFFT(app);
-				return VKFFT_ERROR_MALLOC_FAILED;
-			}
-			else {
-				for (pfUINT i = 0; i < app->configuration.num_streams; i++)
-					app->configuration.stream[i] = inputLaunchConfiguration.stream[i];
-			}
-		}
-	}
-	app->configuration.streamID = 0;
-	int value = 0;
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, app->configuration.device[0]);
-	if (res != CUDA_SUCCESS) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.computeCapabilityMajor = value;
-
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, app->configuration.device[0]);
-	if (res != CUDA_SUCCESS) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.computeCapabilityMinor = value;
-
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, app->configuration.device[0]);
-	if (res != CUDA_SUCCESS) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.maxThreadsNum = value;
-
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X, app->configuration.device[0]);
-	if (res != CUDA_SUCCESS) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.maxComputeWorkGroupCount[0] = value;
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Y, app->configuration.device[0]);
-	if (res != CUDA_SUCCESS) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.maxComputeWorkGroupCount[1] = value;
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Z, app->configuration.device[0]);
-	if (res != CUDA_SUCCESS) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.maxComputeWorkGroupCount[2] = value;
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X, app->configuration.device[0]);
-	if (res != CUDA_SUCCESS) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.maxComputeWorkGroupSize[0] = value;
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y, app->configuration.device[0]);
-	if (res != CUDA_SUCCESS) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.maxComputeWorkGroupSize[1] = value;
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Z, app->configuration.device[0]);
-	if (res != CUDA_SUCCESS) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.maxComputeWorkGroupSize[2] = value;
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, app->configuration.device[0]);
-	if (res != CUDA_SUCCESS) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.sharedMemorySizeStatic = value;
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK_OPTIN, app->configuration.device[0]);
-	if (res != CUDA_SUCCESS) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.sharedMemorySize = value;// (value > 65536) ? 65536 : value;
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_WARP_SIZE, app->configuration.device[0]);
-	if (res != CUDA_SUCCESS) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.warpSize = value;
-	res = cuDeviceGetAttribute(&value, CU_DEVICE_ATTRIBUTE_SINGLE_TO_DOUBLE_PRECISION_PERF_RATIO, app->configuration.device[0]);
-	if (res != CUDA_SUCCESS) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.useLUT_4step = (value <= 4) ? -1 : 1;
-	//we don't need this in CUDA
-	app->configuration.useRaderUintLUT = 0;
-	if (app->configuration.num_streams > 1) {
-		app->configuration.stream_event = (cudaEvent_t*)malloc(app->configuration.num_streams * sizeof(cudaEvent_t));
-		if (!app->configuration.stream_event) {
-			deleteVkFFT(app);
-			return VKFFT_ERROR_MALLOC_FAILED;
-		}
-		for (pfUINT i = 0; i < app->configuration.num_streams; i++) {
-			res_t = cudaEventCreate(&app->configuration.stream_event[i]);
-			if (res_t != cudaSuccess) {
-				deleteVkFFT(app);
-				return VKFFT_ERROR_FAILED_TO_CREATE_EVENT;
-			}
-		}
-	}
-
-	app->configuration.coalescedMemory = (app->configuration.halfPrecision) ? 64 : 32;//the coalesced memory is equal to 32 bytes between L2 and VRAM.
-	app->configuration.useLUT = (app->configuration.doublePrecision || app->configuration.doublePrecisionFloatMemory || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 1 : -1;
-	app->configuration.registerBoostNonPow2 = 0;
-	app->configuration.registerBoost = (app->configuration.sharedMemorySize <= 65536) ? 2 : 1;
-	app->configuration.registerBoost4Step = 1;
-	app->configuration.swapTo3Stage4Step = (app->configuration.doublePrecision || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 16777216 : 33554432;
-	app->configuration.reorderFourStep = 3;
-	app->configuration.vendorID = 0x10DE;
-#elif(VKFFT_BACKEND==2)
-	hipError_t res = hipSuccess;
-	if (inputLaunchConfiguration.device == 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_INVALID_DEVICE;
-	}
-	app->configuration.device = (hipDevice_t*)calloc(1, sizeof(hipDevice_t));
-	if (!app->configuration.device) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_MALLOC_FAILED;
-	}
-	else {
-		app->configuration.device[0] = inputLaunchConfiguration.device[0];
-	}
-
-	if (inputLaunchConfiguration.num_streams != 0) {
-		app->configuration.num_streams = inputLaunchConfiguration.num_streams;
-		if (inputLaunchConfiguration.stream != 0) {
-			app->configuration.stream = (hipStream_t*)calloc(app->configuration.num_streams, sizeof(hipStream_t));
-			if (!app->configuration.stream) {
-				deleteVkFFT(app);
-				return VKFFT_ERROR_MALLOC_FAILED;
-			}
-			else {
-				for (pfUINT i = 0; i < app->configuration.num_streams; i++)
-					app->configuration.stream[i] = inputLaunchConfiguration.stream[i];
-			}
-		}
-	}
-	app->configuration.streamID = 0;
-	int value = 0;
-	res = hipDeviceGetAttribute(&value, hipDeviceAttributeComputeCapabilityMajor, app->configuration.device[0]);
-	if (res != hipSuccess) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.computeCapabilityMajor = value;
-
-	res = hipDeviceGetAttribute(&value, hipDeviceAttributeComputeCapabilityMinor, app->configuration.device[0]);
-	if (res != hipSuccess) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.computeCapabilityMinor = value;
-
-	res = hipDeviceGetAttribute(&value, hipDeviceAttributeMaxThreadsPerBlock, app->configuration.device[0]);
-	if (res != hipSuccess) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.maxThreadsNum = value;
-
-	res = hipDeviceGetAttribute(&value, hipDeviceAttributeMaxGridDimX, app->configuration.device[0]);
-	if (res != hipSuccess) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.maxComputeWorkGroupCount[0] = value;
-	res = hipDeviceGetAttribute(&value, hipDeviceAttributeMaxGridDimY, app->configuration.device[0]);
-	if (res != hipSuccess) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.maxComputeWorkGroupCount[1] = value;
-	res = hipDeviceGetAttribute(&value, hipDeviceAttributeMaxGridDimZ, app->configuration.device[0]);
-	if (res != hipSuccess) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.maxComputeWorkGroupCount[2] = value;
-	res = hipDeviceGetAttribute(&value, hipDeviceAttributeMaxBlockDimX, app->configuration.device[0]);
-	if (res != hipSuccess) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.maxComputeWorkGroupSize[0] = value;
-	res = hipDeviceGetAttribute(&value, hipDeviceAttributeMaxBlockDimY, app->configuration.device[0]);
-	if (res != hipSuccess) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.maxComputeWorkGroupSize[1] = value;
-	res = hipDeviceGetAttribute(&value, hipDeviceAttributeMaxBlockDimZ, app->configuration.device[0]);
-	if (res != hipSuccess) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.maxComputeWorkGroupSize[2] = value;
-	res = hipDeviceGetAttribute(&value, hipDeviceAttributeMaxSharedMemoryPerBlock, app->configuration.device[0]);
-	if (res != hipSuccess) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.sharedMemorySizeStatic = value;
-	//hipDeviceGetAttribute(&value, hipDeviceAttributeMaxSharedMemoryPerBlockOptin, app->configuration.device[0]);
-	app->configuration.sharedMemorySize = value;// (value > 65536) ? 65536 : value;
-	res = hipDeviceGetAttribute(&value, hipDeviceAttributeWarpSize, app->configuration.device[0]);
-	if (res != hipSuccess) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.warpSize = value;
-	app->configuration.useRaderUintLUT = 0;
-	if (app->configuration.num_streams > 1) {
-		app->configuration.stream_event = (hipEvent_t*)malloc(app->configuration.num_streams * sizeof(hipEvent_t));
-		if (!app->configuration.stream_event) {
-			deleteVkFFT(app);
-			return VKFFT_ERROR_MALLOC_FAILED;
-		}
-		for (pfUINT i = 0; i < app->configuration.num_streams; i++) {
-			res = hipEventCreate(&app->configuration.stream_event[i]);
-			if (res != hipSuccess) {
-				deleteVkFFT(app);
-				return VKFFT_ERROR_FAILED_TO_CREATE_EVENT;
-			}
-		}
-	}
-	app->configuration.coalescedMemory = (app->configuration.halfPrecision) ? 64 : 32;
-	app->configuration.useLUT = (app->configuration.doublePrecision || app->configuration.doublePrecisionFloatMemory || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 1 : -1;
-	app->configuration.useLUT_4step = -1;
-	app->configuration.registerBoostNonPow2 = 0;
-	app->configuration.registerBoost = 4;
-	app->configuration.registerBoost4Step = 1;
-	app->configuration.reorderFourStep = 3;
-	app->configuration.swapTo3Stage4Step = (app->configuration.doublePrecision || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 1048576 : 2097152;
-	app->configuration.vendorID = 0x1002;
-	app->configuration.optimizePow2StridesTempBuffer = 2;
-#elif(VKFFT_BACKEND==3)
-	cl_int res = 0;
-	if (inputLaunchConfiguration.device == 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_INVALID_DEVICE;
-	}
-	app->configuration.device = (cl_device_id*)calloc(1, sizeof(cl_device_id));
-	if (!app->configuration.device) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_MALLOC_FAILED;
-	}
-	else {
-		app->configuration.device[0] = inputLaunchConfiguration.device[0];
-	}
-
-	if (inputLaunchConfiguration.context == 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_INVALID_CONTEXT;
-	}
-	app->configuration.context = (cl_context*)calloc(1, sizeof(cl_context));
-	if (!app->configuration.context) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_MALLOC_FAILED;
-	}
-	else {
-		app->configuration.context[0] = inputLaunchConfiguration.context[0];
-	}
-
-	cl_uint vendorID;
-	size_t value_int64;
-	cl_uint value_cl_uint;
-	res = clGetDeviceInfo(app->configuration.device[0], CL_DEVICE_VENDOR_ID, sizeof(cl_int), &vendorID, 0);
-	if (res != 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	res = clGetDeviceInfo(app->configuration.device[0], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(size_t), &value_int64, 0);
-	if (res != 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.maxThreadsNum = value_int64;
-
-	res = clGetDeviceInfo(app->configuration.device[0], CL_DEVICE_MAX_WORK_ITEM_DIMENSIONS, sizeof(cl_uint), &value_cl_uint, 0);
-	if (res != 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	size_t* dims = (size_t*)malloc(sizeof(size_t) * value_cl_uint);
-	if (dims) {
-		res = clGetDeviceInfo(app->configuration.device[0], CL_DEVICE_MAX_WORK_ITEM_SIZES, sizeof(size_t) * value_cl_uint, dims, 0);
-		if (res != 0) {
-			deleteVkFFT(app);
-			return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-		}
-		app->configuration.maxComputeWorkGroupSize[0] = dims[0];
-		app->configuration.maxComputeWorkGroupSize[1] = dims[1];
-		app->configuration.maxComputeWorkGroupSize[2] = dims[2];
-		free(dims);
-		dims = 0;
-	}
-	else {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_MALLOC_FAILED;
-	}
-	app->configuration.maxComputeWorkGroupCount[0] = UINT64_MAX;
-	app->configuration.maxComputeWorkGroupCount[1] = UINT64_MAX;
-	app->configuration.maxComputeWorkGroupCount[2] = UINT64_MAX;
-	//if ((vendorID == 0x8086) && (!app->configuration.doublePrecision) && (!app->configuration.doublePrecisionFloatMemory)) app->configuration.halfThreads = 1;
-	cl_ulong sharedMemorySize;
-	res = clGetDeviceInfo(app->configuration.device[0], CL_DEVICE_LOCAL_MEM_SIZE, sizeof(cl_ulong), &sharedMemorySize, 0);
-	if (res != 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	}
-	app->configuration.sharedMemorySize = sharedMemorySize;
-	app->configuration.vendorID = vendorID;
-	app->configuration.useRaderUintLUT = 1;
-	switch (vendorID) {
-	case 0x10DE://NVIDIA
-		app->configuration.coalescedMemory = (app->configuration.halfPrecision) ? 64 : 32;//the coalesced memory is equal to 32 bytes between L2 and VRAM.
-		app->configuration.useLUT = (app->configuration.doublePrecision || app->configuration.doublePrecisionFloatMemory || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 1 : -1;
-		app->configuration.warpSize = 32;
-		app->configuration.registerBoostNonPow2 = 0;
-		app->configuration.registerBoost = 4;
-		app->configuration.registerBoost4Step = 1;
-		app->configuration.reorderFourStep = 2;
-		app->configuration.swapTo3Stage4Step = (app->configuration.doublePrecision || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 4194305 : 4194305;
-		app->configuration.sharedMemorySize -= 0x10;//reserved by system
-		break;
-	case 0x8086://INTEL
-		app->configuration.coalescedMemory = (app->configuration.halfPrecision) ? 128 : 64;
-		app->configuration.useLUT = 1;
-		app->configuration.warpSize = 32;
-		app->configuration.registerBoostNonPow2 = 0;
-		app->configuration.registerBoost = (sharedMemorySize >= 65536) ? 1 : 2;
-		app->configuration.registerBoost4Step = 1;
-		app->configuration.reorderFourStep = 1;
-		app->configuration.swapTo3Stage4Step = (app->configuration.doublePrecision || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 262144 : 524288;
-		break;
-	case 0x1002://AMD
-		app->configuration.coalescedMemory = (app->configuration.halfPrecision) ? 64 : 32;
-		app->configuration.useLUT = (app->configuration.doublePrecision || app->configuration.doublePrecisionFloatMemory || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 1 : -1;
-		app->configuration.warpSize = 64;
-		app->configuration.registerBoostNonPow2 = 0;
-		app->configuration.registerBoost = (sharedMemorySize >= 65536) ? 2 : 4;
-		app->configuration.registerBoost4Step = 1;
-		app->configuration.reorderFourStep = 3;
-		app->configuration.swapTo3Stage4Step = (app->configuration.doublePrecision || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 262144 : 524288;
-		app->configuration.optimizePow2StridesTempBuffer = 2;
-		break;
-	default:
-		app->configuration.coalescedMemory = (app->configuration.halfPrecision) ? 128 : 64;
-		app->configuration.useLUT = (app->configuration.doublePrecision || app->configuration.doublePrecisionFloatMemory || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 1 : -1;
-		app->configuration.warpSize = 32;
-		app->configuration.registerBoostNonPow2 = 0;
-		app->configuration.registerBoost = 1;
-		app->configuration.registerBoost4Step = 1;
-		app->configuration.reorderFourStep = 1;
-		app->configuration.swapTo3Stage4Step = (app->configuration.doublePrecision || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 262144 : 524288;
-		break;
-	}
-#elif(VKFFT_BACKEND==4)
-	ze_result_t res = ZE_RESULT_SUCCESS;
-	if (inputLaunchConfiguration.device == 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_INVALID_DEVICE;
-	}
-	app->configuration.device = (ze_device_handle_t*)calloc(1, sizeof(ze_device_handle_t));
-	if (!app->configuration.device) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_MALLOC_FAILED;
-	}
-	else {
-		app->configuration.device[0] = inputLaunchConfiguration.device[0];
-	}
-
-	if (inputLaunchConfiguration.context == 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_INVALID_CONTEXT;
-	}
-	app->configuration.context = (ze_context_handle_t*)calloc(1, sizeof(ze_context_handle_t));
-	if (!app->configuration.context) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_MALLOC_FAILED;
-	}
-	else {
-		app->configuration.context[0] = inputLaunchConfiguration.context[0];
-	}
-
-	if (inputLaunchConfiguration.commandQueue == 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_INVALID_QUEUE;
-	}
-	app->configuration.commandQueue = (ze_command_queue_handle_t*)calloc(1, sizeof(ze_command_queue_handle_t));
-	if (!app->configuration.commandQueue) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_MALLOC_FAILED;
-	}
-	else {
-		app->configuration.commandQueue[0] = inputLaunchConfiguration.commandQueue[0];
-	}
-
-	app->configuration.commandQueueID = inputLaunchConfiguration.commandQueueID;
-	ze_device_properties_t device_properties;
-	ze_device_compute_properties_t compute_properties;
-	res = zeDeviceGetProperties(app->configuration.device[0], &device_properties);
-	if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	res = zeDeviceGetComputeProperties(app->configuration.device[0], &compute_properties);
-	if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_GET_ATTRIBUTE;
-	uint32_t vendorID = device_properties.vendorId;
-	app->configuration.maxThreadsNum = compute_properties.maxTotalGroupSize;
-	app->configuration.maxComputeWorkGroupSize[0] = compute_properties.maxGroupSizeX;
-	app->configuration.maxComputeWorkGroupSize[1] = compute_properties.maxGroupSizeY;
-	app->configuration.maxComputeWorkGroupSize[2] = compute_properties.maxGroupSizeZ;
-
-	app->configuration.maxComputeWorkGroupCount[0] = compute_properties.maxGroupCountX;
-	app->configuration.maxComputeWorkGroupCount[1] = compute_properties.maxGroupCountY;
-	app->configuration.maxComputeWorkGroupCount[2] = compute_properties.maxGroupCountZ;
-	//if ((vendorID == 0x8086) && (!app->configuration.doublePrecision) && (!app->configuration.doublePrecisionFloatMemory)) app->configuration.halfThreads = 1;
-	app->configuration.sharedMemorySize = compute_properties.maxSharedLocalMemory;
-
-	app->configuration.coalescedMemory = (app->configuration.halfPrecision) ? 128 : 64;
-	app->configuration.useLUT = 1;
-	app->configuration.warpSize = device_properties.physicalEUSimdWidth;
-	app->configuration.registerBoostNonPow2 = 0;
-	app->configuration.registerBoost = (app->configuration.sharedMemorySize >= 65536) ? 1 : 2;
-	app->configuration.registerBoost4Step = 1;
-	app->configuration.reorderFourStep = 1;
-	app->configuration.swapTo3Stage4Step = (app->configuration.doublePrecision || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 262144 : 524288;
-	app->configuration.vendorID = 0x8086;
-	app->configuration.useRaderUintLUT = 1;
-#elif(VKFFT_BACKEND==5)
-	if (inputLaunchConfiguration.device == 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_INVALID_DEVICE;
-	}
-    app->configuration.device = inputLaunchConfiguration.device;
-
-	if (inputLaunchConfiguration.queue == 0) {
-		deleteVkFFT(app);
-		return VKFFT_ERROR_INVALID_QUEUE;
-	}
-    app->configuration.queue = inputLaunchConfiguration.queue;
-
-	const char dummy_kernel[50] = "kernel void VkFFT_dummy (){}";
-	const char function_name[20] = "VkFFT_dummy";
-
-	NS::Error* error;
-	MTL::CompileOptions* compileOptions = MTL::CompileOptions::alloc();
-	NS::String* str_code = NS::String::string(dummy_kernel, NS::UTF8StringEncoding);
-	MTL::Library* dummy_library = app->configuration.device->newLibrary(str_code, compileOptions, &error);
-	NS::String* str_name = NS::String::string(function_name, NS::UTF8StringEncoding);
-	MTL::Function* function = dummy_library->newFunction(str_name);
-	MTL::ComputePipelineState* dummy_state = app->configuration.device->newComputePipelineState(function, &error);
-
-	MTL::Size size = app->configuration.device->maxThreadsPerThreadgroup();
-	app->configuration.maxThreadsNum = dummy_state->maxTotalThreadsPerThreadgroup();
-
-	app->configuration.maxComputeWorkGroupSize[0] = size.width;
-	app->configuration.maxComputeWorkGroupSize[1] = size.height;
-	app->configuration.maxComputeWorkGroupSize[2] = size.depth;
-
-	if (app->configuration.maxThreadsNum > 256) {
-		app->configuration.maxThreadsNum = 256;
-
-		app->configuration.maxComputeWorkGroupSize[0] = 256;
-		app->configuration.maxComputeWorkGroupSize[1] = 256;
-		app->configuration.maxComputeWorkGroupSize[2] = 256;
-		//The dummy kernel approach (above) does not work for some DCT-IV kernels (like 256x256x256). They refuse to have more than 256 threads. I will just force OpenCL thread limits for now.
-	}
-
-	app->configuration.maxComputeWorkGroupCount[0] = -1;
-	app->configuration.maxComputeWorkGroupCount[1] = -1;
-	app->configuration.maxComputeWorkGroupCount[2] = -1;
-
-	app->configuration.sharedMemorySizeStatic = app->configuration.device->maxThreadgroupMemoryLength();
-	app->configuration.sharedMemorySize = app->configuration.device->maxThreadgroupMemoryLength();
-
-	app->configuration.warpSize = dummy_state->threadExecutionWidth();
-
-	app->configuration.useRaderUintLUT = 1;
-
-	app->configuration.coalescedMemory = (app->configuration.halfPrecision) ? 128 : 64;//the coalesced memory is equal to 64 bytes between L2 and VRAM.
-	app->configuration.useLUT = (app->configuration.doublePrecision || app->configuration.doublePrecisionFloatMemory || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 1 : -1;
-	app->configuration.registerBoostNonPow2 = 0;
-	app->configuration.registerBoost = 1;
-	app->configuration.registerBoost4Step = 1;
-	app->configuration.reorderFourStep = 1;
-	app->configuration.swapTo3Stage4Step = (app->configuration.doublePrecision || app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) ? 262144 : 524288;
-	app->configuration.vendorID = 0x1027f00;
-
-	dummy_state->release();
-	function->release();
-	str_name->release();
-	dummy_library->release();
-	str_code->release();
-	compileOptions->release();
-#endif
 
 	resFFT = initializeBluesteinAutoPadding(app);
 	if (resFFT != VKFFT_SUCCESS) {
@@ -1232,15 +571,9 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 			}
 		}
 	}
-#if(VKFFT_BACKEND==0)
-	app->configuration.buffer = (const VkBuffer*) calloc(app->configuration.bufferNum, sizeof(const VkBuffer));
-#elif((VKFFT_BACKEND==1) || (VKFFT_BACKEND==2) || (VKFFT_BACKEND==4))
-	app->configuration.buffer = (void* const*) calloc(app->configuration.bufferNum, sizeof(void* const));
-#elif(VKFFT_BACKEND==3)
-	app->configuration.buffer = (const cl_mem*) calloc(app->configuration.bufferNum, sizeof(const cl_mem));
-#elif(VKFFT_BACKEND==5)
-	app->configuration.buffer = (MTL::Buffer* const*) calloc(app->configuration.bufferNum, sizeof(MTL::Buffer* const));
-#endif
+
+	app->configuration.buffer = (backendVkFFTConstBuffer*) calloc(app->configuration.bufferNum, sizeof(backendVkFFTConstBuffer));
+
 	if (!app->configuration.buffer) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_MALLOC_FAILED;
@@ -1253,15 +586,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 			}
 			else
 			{
-#if(VKFFT_BACKEND==0)
-				memcpy((void*)&app->configuration.buffer[i], (const void*)&inputLaunchConfiguration.buffer[i], sizeof(const VkBuffer));
-#elif((VKFFT_BACKEND==1) || (VKFFT_BACKEND==2) || (VKFFT_BACKEND==4))
-				memcpy((void*)&app->configuration.buffer[i], (const void*)&inputLaunchConfiguration.buffer[i], sizeof(void* const));
-#elif(VKFFT_BACKEND==3)
-				memcpy((void*)&app->configuration.buffer[i], (const void*)&inputLaunchConfiguration.buffer[i], sizeof(const cl_mem));
-#elif(VKFFT_BACKEND==5)
-				memcpy((void*)&app->configuration.buffer[i], (const void*)&inputLaunchConfiguration.buffer[i], sizeof(MTL::Buffer* const));
-#endif
+				memcpy((void*)&app->configuration.buffer[i], (const void*)&inputLaunchConfiguration.buffer[i], sizeof(backendVkFFTConstBuffer));
 			}
 		}
 	}
@@ -1295,15 +620,9 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 			}
 		}
 	}
-#if(VKFFT_BACKEND==0)
-	app->configuration.tempBuffer = (VkBuffer*) calloc(app->configuration.tempBufferNum, sizeof(VkBuffer));
-#elif((VKFFT_BACKEND==1) || (VKFFT_BACKEND==2) || (VKFFT_BACKEND==4))
-	app->configuration.tempBuffer = (void**) calloc(app->configuration.tempBufferNum, sizeof(void*));
-#elif(VKFFT_BACKEND==3)
-	app->configuration.tempBuffer = (cl_mem*) calloc(app->configuration.tempBufferNum, sizeof(cl_mem));
-#elif(VKFFT_BACKEND==5)
-	app->configuration.tempBuffer = (MTL::Buffer**) calloc(app->configuration.tempBufferNum, sizeof(MTL::Buffer*));
-#endif
+
+	app->configuration.tempBuffer = (backendVkFFTBuffer*) calloc(app->configuration.tempBufferNum, sizeof(backendVkFFTBuffer));
+
 	if (!app->configuration.tempBuffer) {
 		deleteVkFFT(app);
 		return VKFFT_ERROR_MALLOC_FAILED;
@@ -1316,15 +635,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 			}
 			else
 			{
-#if(VKFFT_BACKEND==0)
-				memcpy((void*)&app->configuration.tempBuffer[i], (const void*)&inputLaunchConfiguration.tempBuffer[i], sizeof(VkBuffer));
-#elif((VKFFT_BACKEND==1) || (VKFFT_BACKEND==2) || (VKFFT_BACKEND==4))
-				memcpy((void*)&app->configuration.tempBuffer[i], (const void*)&inputLaunchConfiguration.tempBuffer[i], sizeof(void*));
-#elif(VKFFT_BACKEND==3)
-				memcpy((void*)&app->configuration.tempBuffer[i], (const void*)&inputLaunchConfiguration.tempBuffer[i], sizeof(cl_mem));
-#elif(VKFFT_BACKEND==5)
-				memcpy((void*)&app->configuration.tempBuffer[i], (const void*)&inputLaunchConfiguration.tempBuffer[i], sizeof(MTL::Buffer*));
-#endif
+				memcpy((void*)&app->configuration.tempBuffer[i], (const void*)&inputLaunchConfiguration.tempBuffer[i], sizeof(backendVkFFTBuffer));
 			}
 		}
 	}
@@ -1356,15 +667,8 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 			}
 		}
 
-#if(VKFFT_BACKEND==0)
-		app->configuration.inputBuffer = (const VkBuffer*) calloc(app->configuration.inputBufferNum, sizeof(const VkBuffer));
-#elif((VKFFT_BACKEND==1) || (VKFFT_BACKEND==2) || (VKFFT_BACKEND==4))
-		app->configuration.inputBuffer = (void* const*) calloc(app->configuration.inputBufferNum, sizeof(void* const));
-#elif(VKFFT_BACKEND==3)
-		app->configuration.inputBuffer = (const cl_mem*) calloc(app->configuration.inputBufferNum, sizeof(const cl_mem));
-#elif(VKFFT_BACKEND==5)
-		app->configuration.inputBuffer = (MTL::Buffer* const*) calloc(app->configuration.inputBufferNum, sizeof(MTL::Buffer* const));
-#endif
+		app->configuration.inputBuffer = (backendVkFFTConstBuffer*) calloc(app->configuration.inputBufferNum, sizeof(backendVkFFTConstBuffer));
+
 		if (!app->configuration.inputBuffer) {
 			deleteVkFFT(app);
 			return VKFFT_ERROR_MALLOC_FAILED;
@@ -1377,15 +681,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 				}
 				else
 				{
-#if(VKFFT_BACKEND==0)
-					memcpy((void*)&app->configuration.inputBuffer[i], (const void*)&inputLaunchConfiguration.inputBuffer[i], sizeof(const VkBuffer));
-#elif((VKFFT_BACKEND==1) || (VKFFT_BACKEND==2) || (VKFFT_BACKEND==4))
-					memcpy((void*)&app->configuration.inputBuffer[i], (const void*)&inputLaunchConfiguration.inputBuffer[i], sizeof(void* const));
-#elif(VKFFT_BACKEND==3)
-					memcpy((void*)&app->configuration.inputBuffer[i], (const void*)&inputLaunchConfiguration.inputBuffer[i], sizeof(const cl_mem));
-#elif(VKFFT_BACKEND==5)
-					memcpy((void*)&app->configuration.inputBuffer[i], (const void*)&inputLaunchConfiguration.inputBuffer[i], sizeof(MTL::Buffer* const));
-#endif
+					memcpy((void*)&app->configuration.inputBuffer[i], (const void*)&inputLaunchConfiguration.inputBuffer[i], sizeof(backendVkFFTBuffer));
 				}
 			}
 		}
@@ -1424,15 +720,8 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 			}
 		}
 		
-#if(VKFFT_BACKEND==0)
-		app->configuration.outputBuffer = (const VkBuffer*) calloc(app->configuration.outputBufferNum, sizeof(const VkBuffer));
-#elif((VKFFT_BACKEND==1) || (VKFFT_BACKEND==2) || (VKFFT_BACKEND==4))
-		app->configuration.outputBuffer = (void* const*) calloc(app->configuration.outputBufferNum, sizeof(void* const));
-#elif(VKFFT_BACKEND==3)
-		app->configuration.outputBuffer = (const cl_mem*) calloc(app->configuration.outputBufferNum, sizeof(const cl_mem));
-#elif(VKFFT_BACKEND==5)
-		app->configuration.outputBuffer = (MTL::Buffer* const*) calloc(app->configuration.outputBufferNum, sizeof(MTL::Buffer* const));
-#endif
+		app->configuration.outputBuffer = (backendVkFFTConstBuffer*) calloc(app->configuration.outputBufferNum, sizeof(backendVkFFTConstBuffer));
+
 		if (!app->configuration.outputBuffer) {
 			deleteVkFFT(app);
 			return VKFFT_ERROR_MALLOC_FAILED;
@@ -1445,15 +734,8 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 				}
 				else
 				{
-#if(VKFFT_BACKEND==0)
-					memcpy((void*)&app->configuration.outputBuffer[i], (const void*)&inputLaunchConfiguration.outputBuffer[i], sizeof(const VkBuffer));
-#elif((VKFFT_BACKEND==1) || (VKFFT_BACKEND==2) || (VKFFT_BACKEND==4))
-					memcpy((void*)&app->configuration.outputBuffer[i], (const void*)&inputLaunchConfiguration.outputBuffer[i], sizeof(void* const));
-#elif(VKFFT_BACKEND==3)
-					memcpy((void*)&app->configuration.outputBuffer[i], (const void*)&inputLaunchConfiguration.outputBuffer[i], sizeof(const cl_mem));
-#elif(VKFFT_BACKEND==5)
-					memcpy((void*)&app->configuration.outputBuffer[i], (const void*)&inputLaunchConfiguration.outputBuffer[i], sizeof(MTL::Buffer* const));
-#endif
+					memcpy((void*)&app->configuration.outputBuffer[i], (const void*)&inputLaunchConfiguration.outputBuffer[i], sizeof(backendVkFFTConstBuffer));
+
 				}
 			}
 		}
@@ -1491,15 +773,8 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 			}
 		}
 
-#if(VKFFT_BACKEND==0)
-		app->configuration.kernel = (const VkBuffer*) calloc(app->configuration.kernelNum, sizeof(const VkBuffer));
-#elif((VKFFT_BACKEND==1) || (VKFFT_BACKEND==2) || (VKFFT_BACKEND==4))
-		app->configuration.kernel = (void* const*) calloc(app->configuration.kernelNum, sizeof(void* const));
-#elif(VKFFT_BACKEND==3)
-		app->configuration.kernel = (const cl_mem*) calloc(app->configuration.kernelNum, sizeof(const cl_mem));
-#elif(VKFFT_BACKEND==5)
-		app->configuration.kernel = (MTL::Buffer* const*) calloc(app->configuration.kernelNum, sizeof(MTL::Buffer* const));
-#endif
+		app->configuration.kernel = (backendVkFFTConstBuffer*) calloc(app->configuration.kernelNum, sizeof(backendVkFFTConstBuffer));
+
 		if (!app->configuration.kernel) {
 			deleteVkFFT(app);
 			return VKFFT_ERROR_MALLOC_FAILED;
@@ -1512,15 +787,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 				}
 				else
 				{
-#if(VKFFT_BACKEND==0)
-					memcpy((void*)&app->configuration.kernel[i], (const void*)&inputLaunchConfiguration.kernel[i], sizeof(const VkBuffer));
-#elif((VKFFT_BACKEND==1) || (VKFFT_BACKEND==2) || (VKFFT_BACKEND==4))
-					memcpy((void*)&app->configuration.kernel[i], (const void*)&inputLaunchConfiguration.kernel[i], sizeof(void* const));
-#elif(VKFFT_BACKEND==3)
-					memcpy((void*)&app->configuration.kernel[i], (const void*)&inputLaunchConfiguration.kernel[i], sizeof(const cl_mem));
-#elif(VKFFT_BACKEND==5)
-					memcpy((void*)&app->configuration.kernel[i], (const void*)&inputLaunchConfiguration.kernel[i], sizeof(MTL::Buffer* const));
-#endif
+					memcpy((void*)&app->configuration.kernel[i], (const void*)&inputLaunchConfiguration.kernel[i], sizeof(backendVkFFTConstBuffer));
 				}
 			}
 		}
@@ -2092,53 +1359,13 @@ static inline VkFFTResult initializeVkFFT(VkFFTApplication* app, VkFFTConfigurat
 	}
 
 	if (app->configuration.allocateTempBuffer) {
-#if(VKFFT_BACKEND==0)
-		VkResult res = VK_SUCCESS;
-#elif(VKFFT_BACKEND==1)
-		cudaError_t res = cudaSuccess;
-#elif(VKFFT_BACKEND==2)
-		hipError_t res = hipSuccess;
-#elif(VKFFT_BACKEND==3)
-		cl_int res = CL_SUCCESS;
-#elif(VKFFT_BACKEND==4)
-		ze_result_t res = ZE_RESULT_SUCCESS;
-#elif(VKFFT_BACKEND==5)
-#endif
-#if(VKFFT_BACKEND==0)
-		resFFT = allocateBufferVulkan(app, app->configuration.tempBuffer, &app->configuration.tempBufferDeviceMemory, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, app->configuration.tempBufferSize[0]);
+
+		resFFT = backendVkFFTallocateBuffer(app);
+		
 		if (resFFT != VKFFT_SUCCESS) {
 			deleteVkFFT(app);
 			return resFFT;
 		}
-#elif(VKFFT_BACKEND==1)
-		res = cudaMalloc(app->configuration.tempBuffer, app->configuration.tempBufferSize[0]);
-		if (res != cudaSuccess) {
-			deleteVkFFT(app);
-			return VKFFT_ERROR_FAILED_TO_ALLOCATE;
-		}
-#elif(VKFFT_BACKEND==2)
-		res = hipMalloc(app->configuration.tempBuffer, app->configuration.tempBufferSize[0]);
-		if (res != hipSuccess) {
-			deleteVkFFT(app);
-			return VKFFT_ERROR_FAILED_TO_ALLOCATE;
-		}
-#elif(VKFFT_BACKEND==3)
-		app->configuration.tempBuffer[0] = clCreateBuffer(app->configuration.context[0], CL_MEM_READ_WRITE, app->configuration.tempBufferSize[0], 0, &res);
-		if (res != CL_SUCCESS) {
-			deleteVkFFT(app);
-			return VKFFT_ERROR_FAILED_TO_ALLOCATE;
-		}
-#elif(VKFFT_BACKEND==4)
-		ze_device_mem_alloc_desc_t device_desc = VKFFT_ZERO_INIT;
-		device_desc.stype = ZE_STRUCTURE_TYPE_DEVICE_MEM_ALLOC_DESC;
-		res = zeMemAllocDevice(app->configuration.context[0], &device_desc, app->configuration.tempBufferSize[0], sizeof(float), app->configuration.device[0], app->configuration.tempBuffer);
-		if (res != ZE_RESULT_SUCCESS) {
-			deleteVkFFT(app);
-			return VKFFT_ERROR_FAILED_TO_ALLOCATE;
-		}
-#elif(VKFFT_BACKEND==5)
-		app->configuration.tempBuffer[0] = app->configuration.device->newBuffer(app->configuration.tempBufferSize[0], MTL::ResourceStorageModePrivate);
-#endif
 
 		if (!app->configuration.makeInversePlanOnly) {
 			for (pfUINT i = 0; i < app->configuration.FFTdim; i++) {

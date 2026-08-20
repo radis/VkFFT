@@ -49,9 +49,4 @@ typedef void* backendVkFFTBuffer;
 	void* bufferBluesteinFFT[VKFFT_MAX_FFT_DIMENSIONS];\
 	void* bufferBluesteinIFFT[VKFFT_MAX_FFT_DIMENSIONS]	
 
-
-
-
-
-
 #endif //VKFFT_BACKEND_STRUCTS_H

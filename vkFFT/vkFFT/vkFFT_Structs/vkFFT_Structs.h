@@ -71,7 +71,7 @@ struct PfContainer{
 
 typedef struct {
 	
-	VKFFT_BACKEND_FFT_CONFIGURATION; //from backend_xxx_struct.h
+	VKFFT_BACKEND_FFT_CONFIGURATION //from backend_xxx_struct.h
 	
 	//WHDCN layout
 
@@ -240,7 +240,7 @@ typedef struct {
 
 typedef struct {
 
-	VKFFT_BACKEND_LAUNCH_PARAMS; //from backend_xxx_struct.h
+	VKFFT_BACKEND_LAUNCH_PARAMS //from backend_xxx_struct.h
 
 	backendVkFFTConstBuffer* buffer;//pointer to array of buffers (or one buffer) used for computations
 	backendVkFFTBuffer* tempBuffer;//needed if reorderFourStep is enabled to transpose the array. Same sum size or bigger as buffer (can be split in multiple). Default 0. Setting to non zero value enables manual user allocation
@@ -604,7 +604,7 @@ struct VkFFTRaderContainer {
 
 typedef struct {
 	
-	VKFFT_BACKEND_SPEC_CONST_LAYOUT; //from backend_xxx_struct.h
+	VKFFT_BACKEND_SPEC_CONST_LAYOUT //from backend_xxx_struct.h
 	
 	VkFFTResult res;
 	pfLD double_PI;
@@ -923,7 +923,7 @@ typedef struct {
 
 typedef struct {
 	
-	VKFFT_BACKEND_PUSH_CONST_LAYOUT; //from backend_xxx_struct.h
+	VKFFT_BACKEND_PUSH_CONST_LAYOUT //from backend_xxx_struct.h
 	
 	char data[128];
 	
@@ -948,7 +948,7 @@ typedef struct {
 
 typedef struct {
 	
-	VKFFT_BACKEND_AXIS;  //from backend_xxx_struct.h
+	VKFFT_BACKEND_AXIS  //from backend_xxx_struct.h
 	
 	pfUINT numBindings;
 	pfUINT axisBlock[4];
@@ -982,7 +982,7 @@ typedef struct {
 
 typedef struct {
 	
-	VKFFT_BACKEND_APPLICATION; //from backend_xxx_struct.h
+	VKFFT_BACKEND_APPLICATION //from backend_xxx_struct.h
 	
 	VkFFTConfiguration configuration;
 	VkFFTPlan* localFFTPlan;

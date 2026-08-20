@@ -21,13 +21,16 @@
 	\
 	VkDeviceMemory tempBufferDeviceMemory; /*Filled at app creation*/\
 	VkCommandBuffer* commandBuffer; /*Filled at app execution*/\
-	VkMemoryBarrier* memory_barrier /*Filled at app creation*/
+	VkMemoryBarrier* memory_barrier; /*Filled at app creation*/
 
 typedef const VkBuffer backendVkFFTConstBuffer;
 typedef VkBuffer backendVkFFTBuffer;
 
+typedef VkResult backendVkFFTResult;
+#define VKFFT_BACKEND_SUCCESS VK_SUCCESS
+
 #define VKFFT_BACKEND_LAUNCH_PARAMS \
-	VkCommandBuffer* commandBuffer //commandBuffer to which FFT is appended
+	VkCommandBuffer* commandBuffer; //commandBuffer to which FFT is appended
 
 #define VKFFT_BACKEND_SPEC_CONST_LAYOUT
 
@@ -49,7 +52,7 @@ typedef VkBuffer backendVkFFTBuffer;
 	VkDeviceMemory* bufferBluesteinDeviceMemory;\
 	VkDeviceMemory* bufferBluesteinFFTDeviceMemory;\
 	VkBuffer* bufferBluestein;\
-	VkBuffer* bufferBluesteinFFT
+	VkBuffer* bufferBluesteinFFT;
 
 
 #define VKFFT_BACKEND_APPLICATION \
@@ -60,12 +63,6 @@ typedef VkBuffer backendVkFFTBuffer;
 	VkDeviceMemory bufferBluesteinIFFTDeviceMemory[VKFFT_MAX_FFT_DIMENSIONS];\
 	VkBuffer bufferBluestein[VKFFT_MAX_FFT_DIMENSIONS];\
 	VkBuffer bufferBluesteinFFT[VKFFT_MAX_FFT_DIMENSIONS];\
-	VkBuffer bufferBluesteinIFFT[VKFFT_MAX_FFT_DIMENSIONS]
-
-
-
-
-
-
+	VkBuffer bufferBluesteinIFFT[VKFFT_MAX_FFT_DIMENSIONS];
 
 #endif //VKFFT_BACKEND_STRUCTS_H

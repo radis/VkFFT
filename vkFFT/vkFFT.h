@@ -34,27 +34,6 @@
 #endif
 #include <inttypes.h>
 
-#if(VKFFT_BACKEND==0)
-#include "backend/backend_vulkan.h"
-#include "backend/backend_vulkan_structs.h"
-#elif(VKFFT_BACKEND==1)
-#include "backend/backend_cuda.h"
-#include "backend/backend_cuda_structs.h"
-#elif(VKFFT_BACKEND==2)
-#include "backend/backend_hip.h"
-#include "backend/backend_hip_structs.h"
-#elif(VKFFT_BACKEND==3)
-#include "backend/backend_opencl.h"
-#include "backend/backend_opencl_structs.h"
-#elif(VKFFT_BACKEND==4)
-#include "backend/backend_zero.h"
-#include "backend/backend_zero_structs.h"
-#elif(VKFFT_BACKEND==5)
-#include "backend/backend_metal.h"
-#include "backend/backend_metal_structs.h"
-#endif
-
-
 #ifdef __cplusplus
 #define VKFFT_ZERO_INIT {}
 #else
@@ -95,6 +74,11 @@
 
 #endif
 
+
+
+
+
+#include "backend.h"
 #include "vkFFT/vkFFT_Structs/vkFFT_Structs.h"
 #include "vkFFT/vkFFT_AppManagement/vkFFT_RunApp.h"
 #include "vkFFT/vkFFT_AppManagement/vkFFT_InitializeApp.h"

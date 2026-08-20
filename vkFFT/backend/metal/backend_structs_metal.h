@@ -20,6 +20,9 @@
 typedef MTL::Buffer* const backendVkFFTConstBuffer;
 typedef MTL::Buffer* backendVkFFTBuffer;
 
+typedef int backendVkFFTResult; //Not used on Metal
+#define VKFFT_BACKEND_SUCCESS 0 //Not used on Metal
+
 #define VKFFT_BACKEND_LAUNCH_PARAMS \
 	MTL::CommandBuffer* commandBuffer;/*commandBuffer to which FFT is appended*/\
 	MTL::ComputeCommandEncoder* commandEncoder //encoder associated with commandBuffer
@@ -47,10 +50,6 @@ typedef MTL::Buffer* backendVkFFTBuffer;
 	MTL::Buffer* bufferBluestein[VKFFT_MAX_FFT_DIMENSIONS];\
 	MTL::Buffer* bufferBluesteinFFT[VKFFT_MAX_FFT_DIMENSIONS];\
 	MTL::Buffer* bufferBluesteinIFFT[VKFFT_MAX_FFT_DIMENSIONS]
-
-
-
-
 
 
 #endif //VKFFT_BACKEND_STRUCTS_H

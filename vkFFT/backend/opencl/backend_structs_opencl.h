@@ -48,8 +48,4 @@ typedef cl_mem backendVkFFTBuffer;
 	cl_mem bufferBluesteinIFFT[VKFFT_MAX_FFT_DIMENSIONS]	
 
 
-
-
-
-
 #endif //VKFFT_BACKEND_STRUCTS_H
