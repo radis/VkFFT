@@ -94,4 +94,13 @@ static inline VkFFTResult backendVkFFTallocateBuffer(VkFFTApplication* app) {
 	app->configuration.tempBuffer[0] = app->configuration.device->newBuffer(app->configuration.tempBufferSize[0], MTL::ResourceStorageModePrivate);
 	return VKFFT_SUCCESS;
 };
+
+
+static inline VkFFTResult deleteVkFFT_backendDestroyBuffer(int device, backendVkFFTBuffer buffer){
+	((MTL::Buffer*)buffer)->release();
+	return VKFFT_SUCCESS;
+};
+
+static inline void deleteVkFFT_backendFreeAPI(VkFFTApplication* app){}
+
 #endif //VKFFT_BACKEND_APP_MANAGEMENT_H

@@ -21,6 +21,7 @@
 // THE SOFTWARE.
 #ifndef VKFFT_DELETEAPP_H
 #define VKFFT_DELETEAPP_H
+#include "backend.h"
 #include "vkFFT/vkFFT_Structs/vkFFT_Structs.h"
 #include "vkFFT/vkFFT_PlanManagement/vkFFT_API_handles/vkFFT_DeletePlan.h"
 #include "vkFFT/vkFFT_PlanManagement/vkFFT_API_handles/vkFFT_UpdateBuffers.h"
@@ -46,44 +47,12 @@ static inline void deleteVkFFT(VkFFTApplication* app) {
 	if (!app->configuration.userTempBuffer) {
 		if (app->configuration.allocateTempBuffer && (app->configuration.tempBuffer != 0)) {
 			app->configuration.allocateTempBuffer = 0;
-#if(VKFFT_BACKEND==0)
+
 			if (app->configuration.tempBuffer[0] != 0) {
-				vkDestroyBuffer(app->configuration.device[0], app->configuration.tempBuffer[0], 0);
-				app->configuration.tempBuffer[0] = 0;
+				if (!deleteVkFFT_backendDestroyBuffer(VKFFT_BACKEND_DEVICE_PTR[0], VKFFT_BACKEND_GET_BUFFER_RESOURCES(app->configuration.tempBuffer, 0))){
+					app->configuration.tempBuffer[0] = 0; //CHECK: Metal now also zeros the buffer, this is different from before
+				}
 			}
-			if (app->configuration.tempBufferDeviceMemory != 0) {
-				vkFreeMemory(app->configuration.device[0], app->configuration.tempBufferDeviceMemory, 0);
-				app->configuration.tempBufferDeviceMemory = 0;
-			}
-#elif(VKFFT_BACKEND==1)
-			cudaError_t res_t = cudaSuccess;
-			if (app->configuration.tempBuffer[0] != 0) {
-				res_t = cudaFree(app->configuration.tempBuffer[0]);
-				if (res_t == cudaSuccess) app->configuration.tempBuffer[0] = 0;
-			}
-#elif(VKFFT_BACKEND==2)
-			hipError_t res_t = hipSuccess;
-			if (app->configuration.tempBuffer[0] != 0) {
-				res_t = hipFree(app->configuration.tempBuffer[0]);
-				if (res_t == hipSuccess) app->configuration.tempBuffer[0] = 0;
-			}
-#elif(VKFFT_BACKEND==3)
-			cl_int res = 0;
-			if (app->configuration.tempBuffer[0] != 0) {
-				res = clReleaseMemObject(app->configuration.tempBuffer[0]);
-				if (res == 0) app->configuration.tempBuffer[0] = 0;
-			}
-#elif(VKFFT_BACKEND==4)
-			ze_result_t res = ZE_RESULT_SUCCESS;
-			if (app->configuration.tempBuffer[0] != 0) {
-				res = zeMemFree(app->configuration.context[0], app->configuration.tempBuffer[0]);
-				if (res == ZE_RESULT_SUCCESS) app->configuration.tempBuffer[0] = 0;
-			}
-#elif(VKFFT_BACKEND==5)
-			if (app->configuration.tempBuffer[0] != 0) {
-				((MTL::Buffer*)app->configuration.tempBuffer[0])->release();
-			}
-#endif
 		}
 	}
 	if (app->configuration.tempBufferSize != 0) {
@@ -136,136 +105,29 @@ static inline void deleteVkFFT(VkFFTApplication* app) {
 		if (app->configuration.useRaderUintLUT) {
 			for (pfUINT j = 0; j < 4; j++) {
 				if (app->bufferRaderUintLUT[i][j]) {
-#if(VKFFT_BACKEND==0)
-					vkDestroyBuffer(app->configuration.device[0], app->bufferRaderUintLUT[i][j], 0);
-					app->bufferRaderUintLUT[i][j] = 0;
-					vkFreeMemory(app->configuration.device[0], app->bufferRaderUintLUTDeviceMemory[i][j], 0);
-					app->bufferRaderUintLUTDeviceMemory[i][j] = 0;
-#elif(VKFFT_BACKEND==1)
-					cudaError_t res_t = cudaSuccess;
-					res_t = cudaFree(app->bufferRaderUintLUT[i][j]);
-					if (res_t == cudaSuccess) app->bufferRaderUintLUT[i][j] = 0;
-#elif(VKFFT_BACKEND==2)
-					hipError_t res_t = hipSuccess;
-					res_t = hipFree(app->bufferRaderUintLUT[i][j]);
-					if (res_t == hipSuccess) app->bufferRaderUintLUT[i][j] = 0;
-#elif(VKFFT_BACKEND==3)
-					cl_int res = 0;
-					res = clReleaseMemObject(app->bufferRaderUintLUT[i][j]);
-					if (res == 0) app->bufferRaderUintLUT[i][j] = 0;
-#elif(VKFFT_BACKEND==4)
-					ze_result_t res = ZE_RESULT_SUCCESS;
-					res = zeMemFree(app->configuration.context[0], app->bufferRaderUintLUT[i][j]);
-					if (res == ZE_RESULT_SUCCESS) app->bufferRaderUintLUT[i][j] = 0;
-#elif(VKFFT_BACKEND==5)
-					if (app->bufferRaderUintLUT[i][j] != 0) {
-						((MTL::Buffer*)app->bufferRaderUintLUT[i][j])->release();
-						//free(app->bufferRaderUintLUT[i][j]);
+					if (!deleteVkFFT_backendDestroyBuffer(VKFFT_BACKEND_DEVICE_PTR[0], VKFFT_BACKEND_GET_BUFFER_RESOURCES(app->bufferRaderUintLUT, i, j))){
 						app->bufferRaderUintLUT[i][j] = 0;
 					}
-#endif
 				}
 			}
 		}
 		if (app->useBluesteinFFT[i]) {
-#if(VKFFT_BACKEND==0)
+			
 			if (app->bufferBluestein[i] != 0) {
-				vkDestroyBuffer(app->configuration.device[0], app->bufferBluestein[i], 0);
-				app->bufferBluestein[i] = 0;
-			}
-			if (app->bufferBluesteinDeviceMemory[i] != 0) {
-				vkFreeMemory(app->configuration.device[0], app->bufferBluesteinDeviceMemory[i], 0);
-				app->bufferBluesteinDeviceMemory[i] = 0;
+				if (!deleteVkFFT_backendDestroyBuffer(VKFFT_BACKEND_DEVICE_PTR[0], VKFFT_BACKEND_GET_BUFFER_RESOURCES(app->bufferBluestein, i))){
+					app->bufferBluestein[i] = 0;
+				}
 			}
 			if (app->bufferBluesteinFFT[i] != 0) {
-				vkDestroyBuffer(app->configuration.device[0], app->bufferBluesteinFFT[i], 0);
-				app->bufferBluesteinFFT[i] = 0;
-			}
-			if (app->bufferBluesteinFFTDeviceMemory[i] != 0) {
-				vkFreeMemory(app->configuration.device[0], app->bufferBluesteinFFTDeviceMemory[i], 0);
-				app->bufferBluesteinFFTDeviceMemory[i] = 0;
+				if (!deleteVkFFT_backendDestroyBuffer(VKFFT_BACKEND_DEVICE_PTR[0], VKFFT_BACKEND_GET_BUFFER_RESOURCES(app->bufferBluesteinFFT, i))){
+					app->bufferBluesteinFFT[i] = 0;
+				}
 			}
 			if (app->bufferBluesteinIFFT[i] != 0) {
-				vkDestroyBuffer(app->configuration.device[0], app->bufferBluesteinIFFT[i], 0);
-				app->bufferBluesteinIFFT[i] = 0;
+				if (!deleteVkFFT_backendDestroyBuffer(VKFFT_BACKEND_DEVICE_PTR[0], VKFFT_BACKEND_GET_BUFFER_RESOURCES(app->bufferBluesteinIFFT, i))){
+					app->bufferBluesteinIFFT[i] = 0;
+				}
 			}
-			if (app->bufferBluesteinIFFTDeviceMemory[i] != 0) {
-				vkFreeMemory(app->configuration.device[0], app->bufferBluesteinIFFTDeviceMemory[i], 0);
-				app->bufferBluesteinIFFTDeviceMemory[i] = 0;
-			}
-#elif(VKFFT_BACKEND==1)
-			cudaError_t res_t = cudaSuccess;
-			if (app->bufferBluestein[i] != 0) {
-				res_t = cudaFree(app->bufferBluestein[i]);
-				if (res_t == cudaSuccess) app->bufferBluestein[i] = 0;
-			}
-			if (app->bufferBluesteinFFT[i] != 0) {
-				res_t = cudaFree(app->bufferBluesteinFFT[i]);
-				if (res_t == cudaSuccess) app->bufferBluesteinFFT[i] = 0;
-			}
-			if (app->bufferBluesteinIFFT[i] != 0) {
-				res_t = cudaFree(app->bufferBluesteinIFFT[i]);
-				if (res_t == cudaSuccess) app->bufferBluesteinIFFT[i] = 0;
-			}
-#elif(VKFFT_BACKEND==2)
-			hipError_t res_t = hipSuccess;
-			if (app->bufferBluestein[i] != 0) {
-				res_t = hipFree(app->bufferBluestein[i]);
-				if (res_t == hipSuccess) app->bufferBluestein[i] = 0;
-			}
-			if (app->bufferBluesteinFFT[i] != 0) {
-				res_t = hipFree(app->bufferBluesteinFFT[i]);
-				if (res_t == hipSuccess) app->bufferBluesteinFFT[i] = 0;
-			}
-			if (app->bufferBluesteinIFFT[i] != 0) {
-				res_t = hipFree(app->bufferBluesteinIFFT[i]);
-				if (res_t == hipSuccess) app->bufferBluesteinIFFT[i] = 0;
-			}
-#elif(VKFFT_BACKEND==3)
-			cl_int res = 0;
-			if (app->bufferBluestein[i] != 0) {
-				res = clReleaseMemObject(app->bufferBluestein[i]);
-				if (res == 0) app->bufferBluestein[i] = 0;
-			}
-			if (app->bufferBluesteinFFT[i] != 0) {
-				res = clReleaseMemObject(app->bufferBluesteinFFT[i]);
-				if (res == 0) app->bufferBluesteinFFT[i] = 0;
-			}
-			if (app->bufferBluesteinIFFT[i] != 0) {
-				res = clReleaseMemObject(app->bufferBluesteinIFFT[i]);
-				if (res == 0) app->bufferBluesteinIFFT[i] = 0;
-			}
-#elif(VKFFT_BACKEND==4)
-			ze_result_t res = ZE_RESULT_SUCCESS;
-			if (app->bufferBluestein[i] != 0) {
-				res = zeMemFree(app->configuration.context[0], app->bufferBluestein[i]);
-				if (res == ZE_RESULT_SUCCESS) app->bufferBluestein[i] = 0;
-			}
-			if (app->bufferBluesteinFFT[i] != 0) {
-				res = zeMemFree(app->configuration.context[0], app->bufferBluesteinFFT[i]);
-				if (res == ZE_RESULT_SUCCESS) app->bufferBluesteinFFT[i] = 0;
-			}
-			if (app->bufferBluesteinIFFT[i] != 0) {
-				res = zeMemFree(app->configuration.context[0], app->bufferBluesteinIFFT[i]);
-				if (res == ZE_RESULT_SUCCESS) app->bufferBluesteinIFFT[i] = 0;
-			}
-#elif(VKFFT_BACKEND==5)
-			if (app->bufferBluestein[i] != 0) {
-				((MTL::Buffer*)app->bufferBluestein[i])->release();
-				//free(app->bufferBluestein[i]);
-				app->bufferBluestein[i] = 0;
-			}
-			if (app->bufferBluesteinFFT[i] != 0) {
-				((MTL::Buffer*)app->bufferBluesteinFFT[i])->release();
-				//free(app->bufferBluesteinFFT[i]);
-				app->bufferBluesteinFFT[i] = 0;
-			}
-			if (app->bufferBluesteinIFFT[i] != 0) {
-				((MTL::Buffer*)app->bufferBluesteinIFFT[i])->release();
-				//free(app->bufferBluesteinIFFT[i]);
-				app->bufferBluesteinIFFT[i] = 0;
-			}
-#endif
 		}
 	}
 	if (!app->configuration.makeInversePlanOnly) {
@@ -332,111 +194,9 @@ static inline void deleteVkFFT(VkFFTApplication* app) {
 		free(app->configuration.paddedSizes);
 		app->configuration.paddedSizes = 0;
 	}
-#if(VKFFT_BACKEND==0)
-	if (app->configuration.isCompilerInitialized) {
-		glslang_finalize_process();
-		app->configuration.isCompilerInitialized = 0;
-	}
-	if (app->configuration.physicalDevice) {
-		free(app->configuration.physicalDevice);
-		app->configuration.physicalDevice = 0;
-	}
-	if (app->configuration.device) {
-		free(app->configuration.device);
-		app->configuration.device = 0;
-	}
-	if (app->configuration.queue) {
-		free(app->configuration.queue);
-		app->configuration.queue = 0;
-	}
-	if (app->configuration.commandPool) {
-		free(app->configuration.commandPool);
-		app->configuration.commandPool = 0;
-	}
-	if (app->configuration.fence) {
-		free(app->configuration.fence);
-		app->configuration.fence = 0;
-	}
-	if (app->configuration.pipelineCache != 0) {
-		free(app->configuration.pipelineCache);
-		app->configuration.pipelineCache = 0;
-	}
-	if (app->configuration.stagingBuffer != 0) {
-		free(app->configuration.stagingBuffer);
-		app->configuration.stagingBuffer = 0;
-	}
-	if (app->configuration.stagingBufferMemory != 0) {
-		free(app->configuration.stagingBufferMemory);
-		app->configuration.stagingBufferMemory = 0;
-	}
-#elif(VKFFT_BACKEND==1)
-	if (app->configuration.device) {
-		free(app->configuration.device);
-		app->configuration.device = 0;
-	}
-	if (app->configuration.stream) {
-		free(app->configuration.stream);
-		app->configuration.stream = 0;
-	}
-	if (app->configuration.num_streams > 1) {
-		cudaError_t res_t = cudaSuccess;
-		for (pfUINT i = 0; i < app->configuration.num_streams; i++) {
-			if (app->configuration.stream_event[i] != 0) {
-				res_t = cudaEventDestroy(app->configuration.stream_event[i]);
-				if (res_t == cudaSuccess) app->configuration.stream_event[i] = 0;
-			}
-		}
-		if (app->configuration.stream_event != 0) {
-			free(app->configuration.stream_event);
-			app->configuration.stream_event = 0;
-		}
-	}
-#elif(VKFFT_BACKEND==2)
-	if (app->configuration.device) {
-		free(app->configuration.device);
-		app->configuration.device = 0;
-	}
-	if (app->configuration.stream) {
-		free(app->configuration.stream);
-		app->configuration.stream = 0;
-	}
-	if (app->configuration.num_streams > 1) {
-		hipError_t res_t = hipSuccess;
-		for (pfUINT i = 0; i < app->configuration.num_streams; i++) {
-			if (app->configuration.stream_event[i] != 0) {
-				res_t = hipEventDestroy(app->configuration.stream_event[i]);
-				if (res_t == hipSuccess) app->configuration.stream_event[i] = 0;
-			}
-		}
-		if (app->configuration.stream_event != 0) {
-			free(app->configuration.stream_event);
-			app->configuration.stream_event = 0;
-		}
-	}
-#elif(VKFFT_BACKEND==3)
-	if (app->configuration.device) {
-		free(app->configuration.device);
-		app->configuration.device = 0;
-	}
-	if (app->configuration.context) {
-		free(app->configuration.context);
-		app->configuration.context = 0;
-	}
-#elif(VKFFT_BACKEND==4)
-	if (app->configuration.device) {
-		free(app->configuration.device);
-		app->configuration.device = 0;
-	}
-	if (app->configuration.context) {
-		free(app->configuration.context);
-		app->configuration.context = 0;
-	}
-	if (app->configuration.commandQueue) {
-		free(app->configuration.commandQueue);
-		app->configuration.commandQueue = 0;
-	}
-#elif(VKFFT_BACKEND==5)
-#endif
+	
+	deleteVkFFT_backendFreeAPI(app);
+
 	memset(app, 0, sizeof(VkFFTApplication));
 }
 #endif

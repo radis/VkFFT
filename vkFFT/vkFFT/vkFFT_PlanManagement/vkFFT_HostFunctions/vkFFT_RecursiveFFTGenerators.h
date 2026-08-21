@@ -280,7 +280,7 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 			kernelPreparationConfiguration.tempBufferDeviceMemory = app->configuration.tempBufferDeviceMemory;
 		}
 		if (app->configuration.stagingBuffer != 0)	kernelPreparationConfiguration.stagingBuffer = app->configuration.stagingBuffer;
-		if (app->configuration.stagingBufferMemory != 0)	kernelPreparationConfiguration.stagingBufferMemory = app->configuration.stagingBufferMemory;
+		if (app->configuration.stagingBufferDeviceMemory != 0)	kernelPreparationConfiguration.stagingBufferDeviceMemory = app->configuration.stagingBufferDeviceMemory;
 #elif(VKFFT_BACKEND==3)
 		kernelPreparationConfiguration.context = app->configuration.context;
 #elif(VKFFT_BACKEND==4)
@@ -1126,7 +1126,7 @@ static inline VkFFTResult VkFFTGenerateRaderFFTKernel(VkFFTApplication* app, VkF
 				kernelPreparationConfiguration.physicalDevice = app->configuration.physicalDevice;
 				kernelPreparationConfiguration.isCompilerInitialized = 1;//compiler can be initialized before VkFFT plan creation. if not, VkFFT will create and destroy one after initialization
 				if (app->configuration.stagingBuffer != 0)	kernelPreparationConfiguration.stagingBuffer = app->configuration.stagingBuffer;
-				if (app->configuration.stagingBufferMemory != 0)	kernelPreparationConfiguration.stagingBufferMemory = app->configuration.stagingBufferMemory;
+				if (app->configuration.stagingBufferDeviceMemory != 0)	kernelPreparationConfiguration.stagingBufferDeviceMemory = app->configuration.stagingBufferDeviceMemory;
 #elif(VKFFT_BACKEND==3)
 				kernelPreparationConfiguration.context = app->configuration.context;
 #elif(VKFFT_BACKEND==4)

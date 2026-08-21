@@ -4,6 +4,11 @@
 
 #include <ze_api.h>
 
+//typedef void* const backendVkFFTConstBuffer;
+typedef void* backendVkFFTBuffer;
+//typedef ze_device_handle_t backendVkFFTDevice;
+
+
 #define VKFFT_BACKEND_FFT_CONFIGURATION \
 	ze_device_handle_t* device;\
 	ze_context_handle_t* context;\
@@ -14,32 +19,29 @@
 	ze_command_list_handle_t* commandList /*Filled at app execution*/
 
 
-typedef void* const backendVkFFTConstBuffer;
-typedef void* backendVkFFTBuffer;
-
 #define VKFFT_BACKEND_LAUNCH_PARAMS \
 	ze_command_list_handle_t* commandList //commandList to which FFT is appended
 
+
 #define VKFFT_BACKEND_SPEC_CONST_LAYOUT
+
 
 #define VKFFT_BACKEND_PUSH_CONST_LAYOUT
 
+
 #define VKFFT_BACKEND_AXIS \
-	void* const* inputBuffer;\
-	void* const* outputBuffer;\
-	void* const* kernel;\
 	ze_module_handle_t VkFFTModule;\
 	ze_kernel_handle_t VkFFTKernel;\
-	void* bufferLUT;\
-	void* bufferRaderUintLUT;\
-	void** bufferBluestein;\
-	void** bufferBluesteinFFT
-
-#define VKFFT_BACKEND_APPLICATION \
-	void* bufferRaderUintLUT[VKFFT_MAX_FFT_DIMENSIONS][4];\
-	void* bufferBluestein[VKFFT_MAX_FFT_DIMENSIONS];\
-	void* bufferBluesteinFFT[VKFFT_MAX_FFT_DIMENSIONS];\
-	void* bufferBluesteinIFFT[VKFFT_MAX_FFT_DIMENSIONS]
 
 
+#define VKFFT_BACKEND_APPLICATION
+
+
+#define VKFFT_BACKEND_DEVICE_PTR app->configuration.context
+#define VKFFT_BACKEND_GET_BUFFER_RESOURCES_IDX(buf, idx) buf idx
+
+
+#include "backend/backend_structs_generic.h"
+
+	
 #endif //VKFFT_BACKEND_STRUCTS_H

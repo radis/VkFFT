@@ -219,11 +219,65 @@ static inline VkFFTResult allocateBufferVulkan123(VkFFTApplication* app, VkBuffe
 
 
 static inline VkFFTResult backendVkFFTallocateBuffer(VkFFTApplication* app) {
-	return allocateBufferVulkan123(app, app->configuration.tempBuffer, &app->configuration.tempBufferDeviceMemory, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, app->configuration.tempBufferSize[0]);
+	return allocateBufferVulkan123(app, app->configuration.tempBuffer, &app->configuration.tempBufferDeviceMemory[0], VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, app->configuration.tempBufferSize[0]);
 };
 
 
+///////////////////////////////////////////////
+//vkFFT/vkFFT_AppManagement/vkFFT_DeleteApp.h//
+///////////////////////////////////////////////
 
 
+
+static inline VkFFTResult deleteVkFFT_backendDestroyBuffer(VkDevice device, backendVkFFTBuffer buffer, VkDeviceMemory* deviceMemory){
+	vkDestroyBuffer(device, buffer, 0);
+	
+	if (*deviceMemory != 0) {
+		vkFreeMemory(device, *deviceMemory, 0);
+		*deviceMemory = 0;
+	}	
+	return VKFFT_SUCCESS;
+};
+
+
+static inline void deleteVkFFT_backendFreeAPI(VkFFTApplication* app){
+	if (app->configuration.isCompilerInitialized) {
+		glslang_finalize_process();
+		app->configuration.isCompilerInitialized = 0;
+	}
+	if (app->configuration.physicalDevice) {
+		free(app->configuration.physicalDevice);
+		app->configuration.physicalDevice = 0;
+	}
+	if (app->configuration.device) {
+		free(app->configuration.device);
+		app->configuration.device = 0;
+	}
+	if (app->configuration.queue) {
+		free(app->configuration.queue);
+		app->configuration.queue = 0;
+	}
+	if (app->configuration.commandPool) {
+		free(app->configuration.commandPool);
+		app->configuration.commandPool = 0;
+	}
+	if (app->configuration.fence) {
+		free(app->configuration.fence);
+		app->configuration.fence = 0;
+	}
+	if (app->configuration.pipelineCache != 0) {
+		free(app->configuration.pipelineCache);
+		app->configuration.pipelineCache = 0;
+	}
+	if (app->configuration.stagingBuffer != 0) {
+		free(app->configuration.stagingBuffer);
+		app->configuration.stagingBuffer = 0;
+	}
+	if (app->configuration.stagingBufferDeviceMemory != 0) {
+		free(app->configuration.stagingBufferDeviceMemory);
+		app->configuration.stagingBufferDeviceMemory = 0;
+	}
+}
+	
 
 #endif //VKFFT_BACKEND_APP_MANAGEMENT_H

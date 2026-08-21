@@ -40,7 +40,7 @@
 #define VKFFT_BACKEND_PUSH_CONST_LAYOUT
 #define VKFFT_BACKEND_AXIS
 #define VKFFT_BACKEND_APPLICATION
-typedef void* const backendVkFFTConstBuffer;
+//typedef void* const backendVkFFTConstBuffer;
 typedef void* backendVkFFTBuffer;
 #endif
 
@@ -95,11 +95,11 @@ typedef struct {
 	pfUINT* outputBufferSize;//array of output buffers sizes in bytes, if isOutputFormatted is enabled
 	pfUINT* kernelSize;//array of kernel buffers sizes in bytes, if performConvolution is enabled
 
-	backendVkFFTConstBuffer* buffer;//pointer to array of buffers (or one buffer) used for computations
+	backendVkFFTBuffer const* buffer;//pointer to array of buffers (or one buffer) used for computations
 	backendVkFFTBuffer* tempBuffer;//needed if reorderFourStep is enabled to transpose the array. Same sum size or bigger as buffer (can be split in multiple). Default 0. Setting to non zero value enables manual user allocation
-	backendVkFFTConstBuffer* inputBuffer;//pointer to array of input buffers (or one buffer) used to read data from if isInputFormatted is enabled
-	backendVkFFTConstBuffer* outputBuffer;//pointer to array of output buffers (or one buffer) used for write data to if isOutputFormatted is enabled
-	backendVkFFTConstBuffer* kernel;//pointer to array of kernel buffers (or one buffer) used for read kernel data from if performConvolution is enabled
+	backendVkFFTBuffer const* inputBuffer;//pointer to array of input buffers (or one buffer) used to read data from if isInputFormatted is enabled
+	backendVkFFTBuffer const* outputBuffer;//pointer to array of output buffers (or one buffer) used for write data to if isOutputFormatted is enabled
+	backendVkFFTBuffer const* kernel;//pointer to array of kernel buffers (or one buffer) used for read kernel data from if performConvolution is enabled
 
 	pfUINT specifyOffsetsAtLaunch;//specify if offsets will be selected with launch parameters VkFFTLaunchParams (0 - off, 1 - on). Default 0
 
@@ -121,7 +121,7 @@ typedef struct {
 	pfUINT outputBufferOffsetImaginary;//specify if VkFFT has to offset the first element position inside the imaginary output buffer. In bytes. Default 0
 	pfUINT kernelOffsetImaginary;//specify if VkFFT has to offset the first element position inside the imaginary kernel. In bytes. Default 0
 
-	//optional: (default 0 if not stated otherwise)
+	//optional: (default 0 if not stated otherwise)	
 	pfUINT coalescedMemory;//in bytes, for Nvidia and AMD is equal to 32, Intel is equal 64, scaled for half precision. Gonna work regardles, but if specified by user correctly, the performance will be higher.
 	pfUINT aimThreads;//aim at this many threads per block. Default 128
 	pfUINT numSharedBanks;//how many banks shared memory has. Default 32
@@ -242,11 +242,11 @@ typedef struct {
 
 	VKFFT_BACKEND_LAUNCH_PARAMS //from backend_xxx_struct.h
 
-	backendVkFFTConstBuffer* buffer;//pointer to array of buffers (or one buffer) used for computations
+	backendVkFFTBuffer const* buffer;//pointer to array of buffers (or one buffer) used for computations
 	backendVkFFTBuffer* tempBuffer;//needed if reorderFourStep is enabled to transpose the array. Same sum size or bigger as buffer (can be split in multiple). Default 0. Setting to non zero value enables manual user allocation
-	backendVkFFTConstBuffer* inputBuffer;//pointer to array of input buffers (or one buffer) used to read data from if isInputFormatted is enabled
-	backendVkFFTConstBuffer* outputBuffer;//pointer to array of output buffers (or one buffer) used for write data to if isOutputFormatted is enabled
-	backendVkFFTConstBuffer* kernel;//pointer to array of kernel buffers (or one buffer) used for read kernel data from if performConvolution is enabled
+	backendVkFFTBuffer const* inputBuffer;//pointer to array of input buffers (or one buffer) used to read data from if isInputFormatted is enabled
+	backendVkFFTBuffer const* outputBuffer;//pointer to array of output buffers (or one buffer) used for write data to if isOutputFormatted is enabled
+	backendVkFFTBuffer const* kernel;//pointer to array of kernel buffers (or one buffer) used for read kernel data from if performConvolution is enabled
 
 	//following parameters can be specified during kernels launch, if specifyOffsetsAtLaunch parameter was enabled during the initializeVkFFT call
 	pfUINT bufferOffset;//specify if VkFFT has to offset the first element position inside the buffer. In bytes. Default 0 
@@ -359,7 +359,8 @@ typedef enum VkFFTResult {
 	VKFFT_ERROR_FAILED_TO_CREATE_EVENT = 4052,
 	VKFFT_ERROR_FAILED_TO_CREATE_COMMAND_LIST = 4053,
 	VKFFT_ERROR_FAILED_TO_DESTROY_COMMAND_LIST = 4054,
-	VKFFT_ERROR_FAILED_TO_SUBMIT_BARRIER = 4055
+	VKFFT_ERROR_FAILED_TO_SUBMIT_BARRIER = 4055,
+	VKFFT_ERROR_FAILED_TO_DESTROY_BUFFER = 4056
 } VkFFTResult;
 
 static inline const char* getVkFFTErrorString(VkFFTResult result)
@@ -950,6 +951,15 @@ typedef struct {
 	
 	VKFFT_BACKEND_AXIS  //from backend_xxx_struct.h
 	
+	backendVkFFTBuffer const* inputBuffer;
+	backendVkFFTBuffer const* outputBuffer;
+	backendVkFFTBuffer const* kernel;
+	
+	backendVkFFTBuffer bufferLUT;
+	backendVkFFTBuffer bufferRaderUintLUT;
+	backendVkFFTBuffer* bufferBluestein;
+	backendVkFFTBuffer* bufferBluesteinFFT;
+	
 	pfUINT numBindings;
 	pfUINT axisBlock[4];
 	pfUINT groupedBatch;
@@ -983,6 +993,11 @@ typedef struct {
 typedef struct {
 	
 	VKFFT_BACKEND_APPLICATION //from backend_xxx_struct.h
+	
+	backendVkFFTBuffer bufferRaderUintLUT[VKFFT_MAX_FFT_DIMENSIONS][4];
+	backendVkFFTBuffer bufferBluestein[VKFFT_MAX_FFT_DIMENSIONS];
+	backendVkFFTBuffer bufferBluesteinFFT[VKFFT_MAX_FFT_DIMENSIONS];
+	backendVkFFTBuffer bufferBluesteinIFFT[VKFFT_MAX_FFT_DIMENSIONS];
 	
 	VkFFTConfiguration configuration;
 	VkFFTPlan* localFFTPlan;

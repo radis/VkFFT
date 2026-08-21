@@ -157,7 +157,41 @@ static inline VkFFTResult backendVkFFTallocateBuffer(VkFFTApplication* app) {
 		
 		return VKFFT_ERROR_FAILED_TO_ALLOCATE;
 	}
-	return VKFFT_SUCCESS
+	return VKFFT_SUCCESS;
 };
+
+static inline VkFFTResult deleteVkFFT_backendDestroyBuffer(int device, backendVkFFTBuffer buffer){
+	cudaError_t res_t = cudaSuccess;
+	
+	res_t = cudaFree(buffer);
+	if (res_t == cudaSuccess) return VKFFT_SUCCESS;
+	
+	return VKFFT_ERROR_FAILED_TO_DESTROY_BUFFER;
+};
+
+
+static inline void deleteVkFFT_backendFreeAPI(VkFFTApplication* app){
+	if (app->configuration.device) {
+		free(app->configuration.device);
+		app->configuration.device = 0;
+	}
+	if (app->configuration.stream) {
+		free(app->configuration.stream);
+		app->configuration.stream = 0;
+	}
+	if (app->configuration.num_streams > 1) {
+		cudaError_t res_t = cudaSuccess;
+		for (pfUINT i = 0; i < app->configuration.num_streams; i++) {
+			if (app->configuration.stream_event[i] != 0) {
+				res_t = cudaEventDestroy(app->configuration.stream_event[i]);
+				if (res_t == cudaSuccess) app->configuration.stream_event[i] = 0;
+			}
+		}
+		if (app->configuration.stream_event != 0) {
+			free(app->configuration.stream_event);
+			app->configuration.stream_event = 0;
+		}
+	}	
+}
 	
 #endif //VKFFT_BACKEND_APP_MANAGEMENT_H

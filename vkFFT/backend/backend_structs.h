@@ -14,3 +14,4 @@
 #include "backend/metal/backend_structs_metal.h"
 #endif
 
+#include "backend_structs_generic.h"

@@ -572,7 +572,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 		}
 	}
 
-	app->configuration.buffer = (backendVkFFTConstBuffer*) calloc(app->configuration.bufferNum, sizeof(backendVkFFTConstBuffer));
+	app->configuration.buffer = (backendVkFFTBuffer const*) calloc(app->configuration.bufferNum, sizeof(backendVkFFTBuffer const));
 
 	if (!app->configuration.buffer) {
 		deleteVkFFT(app);
@@ -586,7 +586,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 			}
 			else
 			{
-				memcpy((void*)&app->configuration.buffer[i], (const void*)&inputLaunchConfiguration.buffer[i], sizeof(backendVkFFTConstBuffer));
+				memcpy((void*)&app->configuration.buffer[i], (const void*)&inputLaunchConfiguration.buffer[i], sizeof(backendVkFFTBuffer const));
 			}
 		}
 	}
@@ -667,7 +667,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 			}
 		}
 
-		app->configuration.inputBuffer = (backendVkFFTConstBuffer*) calloc(app->configuration.inputBufferNum, sizeof(backendVkFFTConstBuffer));
+		app->configuration.inputBuffer = (backendVkFFTBuffer const*) calloc(app->configuration.inputBufferNum, sizeof(backendVkFFTBuffer const));
 
 		if (!app->configuration.inputBuffer) {
 			deleteVkFFT(app);
@@ -720,7 +720,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 			}
 		}
 		
-		app->configuration.outputBuffer = (backendVkFFTConstBuffer*) calloc(app->configuration.outputBufferNum, sizeof(backendVkFFTConstBuffer));
+		app->configuration.outputBuffer = (backendVkFFTBuffer const*) calloc(app->configuration.outputBufferNum, sizeof(backendVkFFTBuffer const));
 
 		if (!app->configuration.outputBuffer) {
 			deleteVkFFT(app);
@@ -734,7 +734,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 				}
 				else
 				{
-					memcpy((void*)&app->configuration.outputBuffer[i], (const void*)&inputLaunchConfiguration.outputBuffer[i], sizeof(backendVkFFTConstBuffer));
+					memcpy((void*)&app->configuration.outputBuffer[i], (const void*)&inputLaunchConfiguration.outputBuffer[i], sizeof(backendVkFFTBuffer const));
 
 				}
 			}
@@ -773,7 +773,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 			}
 		}
 
-		app->configuration.kernel = (backendVkFFTConstBuffer*) calloc(app->configuration.kernelNum, sizeof(backendVkFFTConstBuffer));
+		app->configuration.kernel = (backendVkFFTBuffer const*) calloc(app->configuration.kernelNum, sizeof(backendVkFFTBuffer const));
 
 		if (!app->configuration.kernel) {
 			deleteVkFFT(app);
@@ -787,7 +787,7 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 				}
 				else
 				{
-					memcpy((void*)&app->configuration.kernel[i], (const void*)&inputLaunchConfiguration.kernel[i], sizeof(backendVkFFTConstBuffer));
+					memcpy((void*)&app->configuration.kernel[i], (const void*)&inputLaunchConfiguration.kernel[i], sizeof(backendVkFFTBuffer const));
 				}
 			}
 		}
@@ -1169,15 +1169,15 @@ static inline VkFFTResult setConfigurationVkFFT(VkFFTApplication* app, VkFFTConf
 			app->configuration.stagingBuffer[0] = inputLaunchConfiguration.stagingBuffer[0];
 		}
 	}
-	if (inputLaunchConfiguration.stagingBufferMemory != 0) {
-		app->configuration.stagingBufferMemory = inputLaunchConfiguration.stagingBufferMemory;
-		app->configuration.stagingBufferMemory = (VkDeviceMemory*)calloc(1,sizeof(VkDeviceMemory));
-		if (!app->configuration.stagingBufferMemory) {
+	if (inputLaunchConfiguration.stagingBufferDeviceMemory != 0) {
+		app->configuration.stagingBufferDeviceMemory = inputLaunchConfiguration.stagingBufferDeviceMemory;
+		app->configuration.stagingBufferDeviceMemory = (VkDeviceMemory*)calloc(1,sizeof(VkDeviceMemory));
+		if (!app->configuration.stagingBufferDeviceMemory) {
 			deleteVkFFT(app);
 			return VKFFT_ERROR_MALLOC_FAILED;
 		}
 		else {
-			app->configuration.stagingBufferMemory[0] = inputLaunchConfiguration.stagingBufferMemory[0];
+			app->configuration.stagingBufferDeviceMemory[0] = inputLaunchConfiguration.stagingBufferDeviceMemory[0];
 		}
 	}
 #endif	

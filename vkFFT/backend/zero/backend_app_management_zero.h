@@ -107,4 +107,26 @@ static inline VkFFTResult backendVkFFTallocateBuffer(VkFFTApplication* app) {
 	return VKFFT_SUCCESS;
 };
 
+static inline VkFFTResult deleteVkFFT_backendDestroyBuffer(ze_context_handle_t context, backendVkFFTBuffer buffer){
+	ze_result_t res = ZE_RESULT_SUCCESS;
+	res = zeMemFree(context, buffer);
+	if (res == ZE_RESULT_SUCCESS) return VKFFT_SUCCESS;
+	return VKFFT_ERROR_FAILED_TO_DESTROY_BUFFER;
+};
+
+static inline void deleteVkFFT_backendFreeAPI(VkFFTApplication* app){
+	if (app->configuration.device) {
+		free(app->configuration.device);
+		app->configuration.device = 0;
+	}
+	if (app->configuration.context) {
+		free(app->configuration.context);
+		app->configuration.context = 0;
+	}
+	if (app->configuration.commandQueue) {
+		free(app->configuration.commandQueue);
+		app->configuration.commandQueue = 0;
+	}	
+}
+
 #endif //VKFFT_BACKEND_APP_MANAGEMENT_H

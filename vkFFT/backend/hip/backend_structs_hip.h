@@ -7,6 +7,11 @@
 #include <hip/hip_runtime_api.h>
 #include <hip/hip_complex.h>
 
+//typedef void* const backendVkFFTConstBuffer;
+typedef void* backendVkFFTBuffer;
+//typedef int backendVkFFTDevice;
+
+
 #define VKFFT_BACKEND_FFT_CONFIGURATION \
 	hipDevice_t* device; /*pointer to HIP device, obtained from hipDeviceGet*/\
 	/*hipCtx_t* context;*/ /*pointer to HIP context, obtained from hipDeviceGet*/\
@@ -20,33 +25,29 @@
 	pfINT  useStrict32BitAddress /* guarantee 32 bit addresses in bytes instead of number of elements. This results in fewer instructions generated. -1: Disable, 0: Infer based on size, 1: enable. Has no effect with useUint64.*/
 
 
-typedef void* const backendVkFFTConstBuffer;
-typedef void* backendVkFFTBuffer;
-
 #define VKFFT_BACKEND_LAUNCH_PARAMS 
+
 
 #define VKFFT_BACKEND_SPEC_CONST_LAYOUT \
 	pfINT  useStrict32BitAddress;
+
 
 #define VKFFT_BACKEND_PUSH_CONST_LAYOUT
 
 
 #define VKFFT_BACKEND_AXIS \
-	void* const* inputBuffer;\
-	void* const* outputBuffer;\
-	void* const* kernel;\
 	hipModule_t VkFFTModule;\
 	hipFunction_t VkFFTKernel;\
-	void* bufferLUT;\
-	void* bufferRaderUintLUT;\
-	hipDeviceptr_t consts_addr;\
-	void** bufferBluestein;\
-	void** bufferBluesteinFFT
+	hipDeviceptr_t consts_addr;
 
-#define VKFFT_BACKEND_APPLICATION \
-	void* bufferRaderUintLUT[VKFFT_MAX_FFT_DIMENSIONS][4];\
-	void* bufferBluestein[VKFFT_MAX_FFT_DIMENSIONS];\
-	void* bufferBluesteinFFT[VKFFT_MAX_FFT_DIMENSIONS];\
-	void* bufferBluesteinIFFT[VKFFT_MAX_FFT_DIMENSIONS]	
+
+#define VKFFT_BACKEND_APPLICATION
+
+
+#define VKFFT_BACKEND_DEVICE_PTR [0]
+#define VKFFT_BACKEND_GET_BUFFER_RESOURCES_IDX(buf, idx) buf idx
+
+
+#include "backend/backend_structs_generic.h"
 
 #endif //VKFFT_BACKEND_STRUCTS_H

@@ -156,4 +156,23 @@ static inline VkFFTResult backendVkFFTallocateBuffer(VkFFTApplication* app) {
 	return VKFFT_SUCCESS;
 };
 
+
+static inline VkFFTResult deleteVkFFT_backendDestroyBuffer(int device, backendVkFFTBuffer buffer){
+	cl_int res = 0;
+	res = clReleaseMemObject(buffer);
+	if (res == 0) return VKFFT_SUCCESS;
+	return VKFFT_ERROR_FAILED_TO_DESTROY_BUFFER;
+};
+
+static inline void deleteVkFFT_backendFreeAPI(VkFFTApplication* app){
+	if (app->configuration.device) {
+		free(app->configuration.device);
+		app->configuration.device = 0;
+	}
+	if (app->configuration.context) {
+		free(app->configuration.context);
+		app->configuration.context = 0;
+	}	
+}
+
 #endif //VKFFT_BACKEND_APP_MANAGEMENT_H
