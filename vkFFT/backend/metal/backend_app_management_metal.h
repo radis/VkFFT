@@ -7,7 +7,7 @@
 
 //vkFFT/vkFFT_AppManagement/vkFFT_RunApp.h
 
-static inline VkFFTResult VkFFTSync(backendVkFFTConfiguration* config) {
+static inline VkFFTResult VkFFTSync_backend(backendVkFFTConfiguration* config) {
 	return VKFFT_SUCCESS;
 };
 

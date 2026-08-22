@@ -7,7 +7,7 @@
 
 //vkFFT/vkFFT_AppManagement/vkFFT_RunApp.h
 
-static inline VkFFTResult VkFFTSync(backendVkFFTConfiguration* config) {
+static inline VkFFTResult VkFFTSync_backend(backendVkFFTConfiguration* config) {
 	ze_result_t res = ZE_RESULT_SUCCESS;
     res = zeCommandListAppendBarrier(config->commandList[0], nullptr, 0, nullptr);
     if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_SUBMIT_BARRIER;

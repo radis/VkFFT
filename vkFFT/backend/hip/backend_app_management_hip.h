@@ -7,7 +7,7 @@
 
 //vkFFT/vkFFT_AppManagement/vkFFT_RunApp.h
 
-static inline VkFFTResult VkFFTSync(backendVkFFTConfiguration* config) {
+static inline VkFFTResult VkFFTSync_backend(backendVkFFTConfiguration* config) {
     if (config->num_streams > 1) {
         hipError_t res = hipSuccess;
         for (pfUINT s = 0; s < config->num_streams; s++) {

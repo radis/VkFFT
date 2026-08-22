@@ -9,7 +9,7 @@
 //vkFFT/vkFFT_AppManagement/vkFFT_RunApp.h//
 ////////////////////////////////////////////
 
-static inline VkFFTResult VkFFTSync(backendVkFFTConfiguration* config) {
+static inline VkFFTResult VkFFTSync_backend(backendVkFFTConfiguration* config) {
     vkCmdPipelineBarrier(config->commandBuffer[0], VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, config->memory_barrier, 0, 0, 0, 0);
 	return VKFFT_SUCCESS;
 };
