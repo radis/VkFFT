@@ -3,12 +3,12 @@
 #define VKFFT_BACKEND_STRUCTS_GENERIC_H
 
 
-typedef struct{ VKFFT_BACKEND_FFT_CONFIGURATION } backendVKFFTConfiguration;
-typedef struct{ VKFFT_BACKEND_LAUNCH_PARAMS     } backendVKFFTLaunchParams;
-typedef struct{ VKFFT_BACKEND_SPEC_CONST_LAYOUT } backendVKFFTSpecConstLayout;
-typedef struct{ VKFFT_BACKEND_PUSH_CONST_LAYOUT } backendVKFFTPsuhConstLayout;
-typedef struct{ VKFFT_BACKEND_AXIS              } backendVKFFTAxis;
-typedef struct{ VKFFT_BACKEND_APPLICATION       } backendVKFFTApplication;
+typedef struct{ VKFFT_BACKEND_FFT_CONFIGURATION } backendVkFFTConfiguration;
+typedef struct{ VKFFT_BACKEND_LAUNCH_PARAMS     } backendVkFFTLaunchParams;
+typedef struct{ VKFFT_BACKEND_SPEC_CONST_LAYOUT } backendVkFFTSpecializationConstantsLayout;
+typedef struct{ VKFFT_BACKEND_PUSH_CONST_LAYOUT } backendVkFFTPushConstantsLayout;
+typedef struct{ VKFFT_BACKEND_AXIS              } backendVkFFTAxis;
+typedef struct{ VKFFT_BACKEND_APPLICATION       } backendVkFFTApplication;
 
 
 #define VKFFT_BACKEND_GET_BUFFER_0(buf)          VKFFT_BACKEND_GET_BUFFER_RESOURCES_IDX(buf,)

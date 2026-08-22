@@ -28,7 +28,7 @@ typedef VkBuffer backendVkFFTBuffer;
 		VkDeviceMemory* stagingBufferDeviceMemory; /*pointer to the user defined staging buffer memory, associated with the stagingBuffer (used internally for LUT data transfers)*/\
 	};\
 	\
-	VkDeviceMemory* tempBufferDeviceMemory; /*Filled at app creation* #BUGFIX: turned into ptr to match corresponding buffer layout #CHECK */\
+	VkDeviceMemory* tempBufferDeviceMemory; /*Filled at app creation* #BUGFIX: turned into ptr to match corresponding tempBuffer #CHECK */\
 	VkCommandBuffer* commandBuffer; /*Filled at app execution*/\
 	VkMemoryBarrier* memory_barrier; /*Filled at app creation*/
 
@@ -63,7 +63,7 @@ typedef VkBuffer backendVkFFTBuffer;
 
 
 #define VKFFT_BACKEND_DEVICE_PTR app->configuration.device
-#define VKFFT_BACKEND_GET_BUFFER_RESOURCES_IDX(buf, idx) buf idx, &buf##DeviceMemory idx
+#define VKFFT_BACKEND_GET_BUFFER_RESOURCES_IDX(buf, idx) &buf idx, &buf##DeviceMemory idx
 
 
 #include "backend/backend_structs_generic.h"

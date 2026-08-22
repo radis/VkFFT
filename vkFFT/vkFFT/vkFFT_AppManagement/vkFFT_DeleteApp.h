@@ -195,7 +195,7 @@ static inline void deleteVkFFT(VkFFTApplication* app) {
 		app->configuration.paddedSizes = 0;
 	}
 	
-	deleteVkFFT_backendFreeAPI(app);
+	deleteVkFFT_backendFreeAPI((backendVkFFTConfiguration*) &app->configuration);
 
 	memset(app, 0, sizeof(VkFFTApplication));
 }

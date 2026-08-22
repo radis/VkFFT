@@ -9,27 +9,29 @@
 //vkFFT/vkFFT_AppManagement/vkFFT_RunApp.h//
 ////////////////////////////////////////////
 
-static inline VkFFTResult VkFFTSync(VkFFTApplication* app) {
-    vkCmdPipelineBarrier(app->configuration.commandBuffer[0], VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, app->configuration.memory_barrier, 0, 0, 0, 0);
+static inline VkFFTResult VkFFTSync(backendVkFFTConfiguration* config) {
+    vkCmdPipelineBarrier(config->commandBuffer[0], VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, config->memory_barrier, 0, 0, 0, 0);
 	return VKFFT_SUCCESS;
 };
 
-static inline void VkFFTAppend_backendSetCommandBuffer(VkFFTApplication* app, VkFFTLaunchParams* launchParams){
-    app->configuration.commandBuffer = launchParams->commandBuffer;
+static inline void VkFFTAppend_backendSetCommandBuffer(backendVkFFTConfiguration* config, backendVkFFTLaunchParams* launchParams){
+    config->commandBuffer = launchParams->commandBuffer;
     VkMemoryBarrier memory_barrier = {
             VK_STRUCTURE_TYPE_MEMORY_BARRIER,
             0,
             VK_ACCESS_SHADER_WRITE_BIT,
             VK_ACCESS_SHADER_READ_BIT,
     };
-    app->configuration.memory_barrier = &memory_barrier;
+    config->memory_barrier = &memory_barrier;
 };
 
 
-static inline void VkFFTAppend_backendBindPipelineAndDescriptorSets(VkFFTApplication* app, VkFFTAxis* axis) {
-	vkCmdBindPipeline(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
-	if (!app->configuration.usePushDescriptors) vkCmdBindDescriptorSets(app->configuration.commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
+static inline void VkFFTAppend_backendBindPipelineAndDescriptorSets(backendVkFFTConfiguration* config, backendVkFFTAxis* axis) {
+	vkCmdBindPipeline(config->commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipeline);
+	if (!config->usePushDescriptors) vkCmdBindDescriptorSets(config->commandBuffer[0], VK_PIPELINE_BIND_POINT_COMPUTE, axis->pipelineLayout, 0, 1, &axis->descriptorSet, 0, 0);
 };
+
+
 
 ///////////////////////////////////////////////////
 //vkFFT/vkFFT_AppManagement/vkFFT_InitializeApp.h//
@@ -112,6 +114,8 @@ static inline VkFFTResult setConfigurationVkFFT_backendSetDeviceParams(VkFFTAppl
 
 	VkPhysicalDeviceProperties physicalDeviceProperties = { 0 };
 	vkGetPhysicalDeviceProperties(app->configuration.physicalDevice[0], &physicalDeviceProperties);
+	
+	//Below is not Vulkan specific
 	app->configuration.maxThreadsNum = physicalDeviceProperties.limits.maxComputeWorkGroupInvocations;
 	if (physicalDeviceProperties.vendorID == 0x8086) app->configuration.maxThreadsNum = 256; //Intel fix
 	app->configuration.maxComputeWorkGroupCount[0] = physicalDeviceProperties.limits.maxComputeWorkGroupCount[0];
@@ -217,6 +221,7 @@ static inline VkFFTResult allocateBufferVulkan123(VkFFTApplication* app, VkBuffe
 	return resFFT;
 }
 
+//TODO: should be generic buffer allocation function, not specifically for tempbuffer
 
 static inline VkFFTResult backendVkFFTallocateBuffer(VkFFTApplication* app) {
 	return allocateBufferVulkan123(app, app->configuration.tempBuffer, &app->configuration.tempBufferDeviceMemory[0], VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, app->configuration.tempBufferSize[0]);
@@ -229,53 +234,53 @@ static inline VkFFTResult backendVkFFTallocateBuffer(VkFFTApplication* app) {
 
 
 
-static inline VkFFTResult deleteVkFFT_backendDestroyBuffer(VkDevice device, backendVkFFTBuffer buffer, VkDeviceMemory* deviceMemory){
-	vkDestroyBuffer(device, buffer, 0);
+static inline VkFFTResult deleteVkFFT_backendDestroyBuffer(VkDevice device, backendVkFFTBuffer* bufferPtr, VkDeviceMemory* deviceMemoryPtr){
+	vkDestroyBuffer(device, *bufferPtr, 0);
 	
-	if (*deviceMemory != 0) {
-		vkFreeMemory(device, *deviceMemory, 0);
-		*deviceMemory = 0;
+	if (*deviceMemoryPtr != 0) {
+		vkFreeMemory(device, *deviceMemoryPtr, 0);
+		*deviceMemoryPtr = 0;
 	}	
 	return VKFFT_SUCCESS;
 };
 
 
-static inline void deleteVkFFT_backendFreeAPI(VkFFTApplication* app){
-	if (app->configuration.isCompilerInitialized) {
+static inline void deleteVkFFT_backendFreeAPI(backendVkFFTConfiguration* config){
+	if (config->isCompilerInitialized) {
 		glslang_finalize_process();
-		app->configuration.isCompilerInitialized = 0;
+		config->isCompilerInitialized = 0;
 	}
-	if (app->configuration.physicalDevice) {
-		free(app->configuration.physicalDevice);
-		app->configuration.physicalDevice = 0;
+	if (config->physicalDevice) {
+		free(config->physicalDevice);
+		config->physicalDevice = 0;
 	}
-	if (app->configuration.device) {
-		free(app->configuration.device);
-		app->configuration.device = 0;
+	if (config->device) {
+		free(config->device);
+		config->device = 0;
 	}
-	if (app->configuration.queue) {
-		free(app->configuration.queue);
-		app->configuration.queue = 0;
+	if (config->queue) {
+		free(config->queue);
+		config->queue = 0;
 	}
-	if (app->configuration.commandPool) {
-		free(app->configuration.commandPool);
-		app->configuration.commandPool = 0;
+	if (config->commandPool) {
+		free(config->commandPool);
+		config->commandPool = 0;
 	}
-	if (app->configuration.fence) {
-		free(app->configuration.fence);
-		app->configuration.fence = 0;
+	if (config->fence) {
+		free(config->fence);
+		config->fence = 0;
 	}
-	if (app->configuration.pipelineCache != 0) {
-		free(app->configuration.pipelineCache);
-		app->configuration.pipelineCache = 0;
+	if (config->pipelineCache != 0) {
+		free(config->pipelineCache);
+		config->pipelineCache = 0;
 	}
-	if (app->configuration.stagingBuffer != 0) {
-		free(app->configuration.stagingBuffer);
-		app->configuration.stagingBuffer = 0;
+	if (config->stagingBuffer != 0) {
+		free(config->stagingBuffer);
+		config->stagingBuffer = 0;
 	}
-	if (app->configuration.stagingBufferDeviceMemory != 0) {
-		free(app->configuration.stagingBufferDeviceMemory);
-		app->configuration.stagingBufferDeviceMemory = 0;
+	if (config->stagingBufferDeviceMemory != 0) {
+		free(config->stagingBufferDeviceMemory);
+		config->stagingBufferDeviceMemory = 0;
 	}
 }
 	

@@ -277,7 +277,7 @@ static inline VkFFTResult VkFFTGeneratePhaseVectors(VkFFTApplication* app, VkFFT
 		kernelPreparationConfiguration.physicalDevice = app->configuration.physicalDevice;
 		kernelPreparationConfiguration.isCompilerInitialized = 1;//compiler can be initialized before VkFFT plan creation. if not, VkFFT will create and destroy one after initialization
 		if (app->configuration.userTempBuffer) {
-			kernelPreparationConfiguration.tempBufferDeviceMemory = app->configuration.tempBufferDeviceMemory;
+			kernelPreparationConfiguration.tempBufferDeviceMemory = app->configuration.tempBufferDeviceMemory; //#CHECK: may have to dereference left and right
 		}
 		if (app->configuration.stagingBuffer != 0)	kernelPreparationConfiguration.stagingBuffer = app->configuration.stagingBuffer;
 		if (app->configuration.stagingBufferDeviceMemory != 0)	kernelPreparationConfiguration.stagingBufferDeviceMemory = app->configuration.stagingBufferDeviceMemory;

@@ -7,16 +7,16 @@
 
 //vkFFT/vkFFT_AppManagement/vkFFT_RunApp.h
 
-static inline VkFFTResult VkFFTSync(VkFFTApplication* app) {
+static inline VkFFTResult VkFFTSync(backendVkFFTConfiguration* config) {
 	return VKFFT_SUCCESS;
 };
 
-static inline void VkFFTAppend_backendSetCommandBuffer(VkFFTApplication* app){
-    app->configuration.commandBuffer = launchParams->commandBuffer;
-    app->configuration.commandEncoder = launchParams->commandEncoder;
+static inline void VkFFTAppend_backendSetCommandBuffer(backendVkFFTConfiguration* config, backendVkFFTLaunchParams* launchParams){
+    config->commandBuffer = launchParams->commandBuffer;
+    config->commandEncoder = launchParams->commandEncoder;
 };
 
-static inline void VkFFTAppend_backendBindPipelineAndDescriptorSets(VkFFTApplication* app, VkFFTAxis* axis) {};
+static inline void VkFFTAppend_backendBindPipelineAndDescriptorSets(backendVkFFTConfiguration* config, backendVkFFTAxis* axis) {};
 
 //vkFFT/vkFFT_AppManagement/vkFFT_InitializeApp.h
 
@@ -96,11 +96,11 @@ static inline VkFFTResult backendVkFFTallocateBuffer(VkFFTApplication* app) {
 };
 
 
-static inline VkFFTResult deleteVkFFT_backendDestroyBuffer(int device, backendVkFFTBuffer buffer){
-	((MTL::Buffer*)buffer)->release();
+static inline VkFFTResult deleteVkFFT_backendDestroyBuffer(int device, backendVkFFTBuffer* bufferPtr){
+	((MTL::Buffer*)(*bufferPtr))->release();
 	return VKFFT_SUCCESS;
 };
 
-static inline void deleteVkFFT_backendFreeAPI(VkFFTApplication* app){}
+static inline void deleteVkFFT_backendFreeAPI(backendVkFFTConfiguration* config){}
 
 #endif //VKFFT_BACKEND_APP_MANAGEMENT_H

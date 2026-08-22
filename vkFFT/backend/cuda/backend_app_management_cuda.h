@@ -7,23 +7,23 @@
 
 //vkFFT/vkFFT_AppManagement/vkFFT_RunApp.h
 
-static inline VkFFTResult VkFFTSync(VkFFTApplication* app) {
-    if (app->configuration.num_streams > 1) {
+static inline VkFFTResult VkFFTSync(backendVkFFTConfiguration* config) {
+    if (config->num_streams > 1) {
         cudaError_t res = cudaSuccess;
-        for (pfUINT s = 0; s < app->configuration.num_streams; s++) {
-            res = cudaEventSynchronize(app->configuration.stream_event[s]);
+        for (pfUINT s = 0; s < config->num_streams; s++) {
+            res = cudaEventSynchronize(config->stream_event[s]);
             if (res != cudaSuccess) return VKFFT_ERROR_FAILED_TO_SYNCHRONIZE;
         }
-        app->configuration.streamCounter = 0;
+        config->streamCounter = 0;
     }
 	return VKFFT_SUCCESS;
 };
 
-static inline void VkFFTAppend_backendSetCommandBuffer(VkFFTApplication* app){
-    app->configuration.streamCounter = 0;
+static inline void VkFFTAppend_backendSetCommandBuffer(backendVkFFTConfiguration* config, backendVkFFTLaunchParams* launchParams){
+    config->streamCounter = 0;
 };
 
-static inline void VkFFTAppend_backendBindPipelineAndDescriptorSets(VkFFTApplication* app, VkFFTAxis* axis) {};
+static inline void VkFFTAppend_backendBindPipelineAndDescriptorSets(backendVkFFTConfiguration* config, backendVkFFTAxis* axis) {};
 
 //vkFFT/vkFFT_AppManagement/vkFFT_InitializeApp.h
 
@@ -160,36 +160,36 @@ static inline VkFFTResult backendVkFFTallocateBuffer(VkFFTApplication* app) {
 	return VKFFT_SUCCESS;
 };
 
-static inline VkFFTResult deleteVkFFT_backendDestroyBuffer(int device, backendVkFFTBuffer buffer){
+static inline VkFFTResult deleteVkFFT_backendDestroyBuffer(int device, backendVkFFTBuffer* bufferPtr){
 	cudaError_t res_t = cudaSuccess;
 	
-	res_t = cudaFree(buffer);
+	res_t = cudaFree(*bufferPtr);
 	if (res_t == cudaSuccess) return VKFFT_SUCCESS;
 	
 	return VKFFT_ERROR_FAILED_TO_DESTROY_BUFFER;
 };
 
 
-static inline void deleteVkFFT_backendFreeAPI(VkFFTApplication* app){
-	if (app->configuration.device) {
-		free(app->configuration.device);
-		app->configuration.device = 0;
+static inline void deleteVkFFT_backendFreeAPI(backendVkFFTConfiguration* config){
+	if (config->device) {
+		free(config->device);
+		config->device = 0;
 	}
-	if (app->configuration.stream) {
-		free(app->configuration.stream);
-		app->configuration.stream = 0;
+	if (config->stream) {
+		free(config->stream);
+		config->stream = 0;
 	}
-	if (app->configuration.num_streams > 1) {
+	if (config->num_streams > 1) {
 		cudaError_t res_t = cudaSuccess;
-		for (pfUINT i = 0; i < app->configuration.num_streams; i++) {
-			if (app->configuration.stream_event[i] != 0) {
-				res_t = cudaEventDestroy(app->configuration.stream_event[i]);
-				if (res_t == cudaSuccess) app->configuration.stream_event[i] = 0;
+		for (pfUINT i = 0; i < config->num_streams; i++) {
+			if (config->stream_event[i] != 0) {
+				res_t = cudaEventDestroy(config->stream_event[i]);
+				if (res_t == cudaSuccess) config->stream_event[i] = 0;
 			}
 		}
-		if (app->configuration.stream_event != 0) {
-			free(app->configuration.stream_event);
-			app->configuration.stream_event = 0;
+		if (config->stream_event != 0) {
+			free(config->stream_event);
+			config->stream_event = 0;
 		}
 	}	
 }

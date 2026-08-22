@@ -7,18 +7,18 @@
 
 //vkFFT/vkFFT_AppManagement/vkFFT_RunApp.h
 
-static inline VkFFTResult VkFFTSync(VkFFTApplication* app) {
+static inline VkFFTResult VkFFTSync(backendVkFFTConfiguration* config) {
 	ze_result_t res = ZE_RESULT_SUCCESS;
-    res = zeCommandListAppendBarrier(app->configuration.commandList[0], nullptr, 0, nullptr);
+    res = zeCommandListAppendBarrier(config->commandList[0], nullptr, 0, nullptr);
     if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_SUBMIT_BARRIER;
 	return VKFFT_SUCCESS;
 };
 
-static inline void VkFFTAppend_backendSetCommandBuffer(VkFFTApplication* app){
-    app->configuration.commandList = launchParams->commandList;
+static inline void VkFFTAppend_backendSetCommandBuffer(backendVkFFTConfiguration* config, backendVkFFTLaunchParams* launchParams){
+    config->commandList = launchParams->commandList;
 };
 
-static inline void VkFFTAppend_backendBindPipelineAndDescriptorSets(VkFFTApplication* app, VkFFTAxis* axis) {};
+static inline void VkFFTAppend_backendBindPipelineAndDescriptorSets(backendVkFFTConfiguration* config, backendVkFFTAxis* axis) {};
 
 //vkFFT/vkFFT_AppManagement/vkFFT_InitializeApp.h
 
@@ -107,25 +107,25 @@ static inline VkFFTResult backendVkFFTallocateBuffer(VkFFTApplication* app) {
 	return VKFFT_SUCCESS;
 };
 
-static inline VkFFTResult deleteVkFFT_backendDestroyBuffer(ze_context_handle_t context, backendVkFFTBuffer buffer){
+static inline VkFFTResult deleteVkFFT_backendDestroyBuffer(ze_context_handle_t context, backendVkFFTBuffer* bufferPtr){
 	ze_result_t res = ZE_RESULT_SUCCESS;
-	res = zeMemFree(context, buffer);
+	res = zeMemFree(context, *bufferPtr);
 	if (res == ZE_RESULT_SUCCESS) return VKFFT_SUCCESS;
 	return VKFFT_ERROR_FAILED_TO_DESTROY_BUFFER;
 };
 
-static inline void deleteVkFFT_backendFreeAPI(VkFFTApplication* app){
-	if (app->configuration.device) {
-		free(app->configuration.device);
-		app->configuration.device = 0;
+static inline void deleteVkFFT_backendFreeAPI(backendVkFFTConfiguration* config){
+	if (config->device) {
+		free(config->device);
+		config->device = 0;
 	}
-	if (app->configuration.context) {
-		free(app->configuration.context);
-		app->configuration.context = 0;
+	if (config->context) {
+		free(config->context);
+		config->context = 0;
 	}
-	if (app->configuration.commandQueue) {
-		free(app->configuration.commandQueue);
-		app->configuration.commandQueue = 0;
+	if (config->commandQueue) {
+		free(config->commandQueue);
+		config->commandQueue = 0;
 	}	
 }
 
