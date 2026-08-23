@@ -7,48 +7,6 @@
 #include <algorithm>
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
-#if(VKFFT_BACKEND==0)
-#include "vulkan/vulkan.h"
-#include "glslang/Include/glslang_c_interface.h"
-#elif(VKFFT_BACKEND==1)
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include <nvrtc.h>
-#include <cuda_runtime_api.h>
-#include <cuComplex.h>
-#elif(VKFFT_BACKEND==2)
-#ifndef __HIP_PLATFORM_HCC__
-#define __HIP_PLATFORM_HCC__
-#endif
-#include <hip/hip_runtime.h>
-#include <hip/hiprtc.h>
-#include <hip/hip_runtime_api.h>
-#include <hip/hip_complex.h>
-#elif(VKFFT_BACKEND==3)
-#ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
-#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
-#endif
-#ifdef __APPLE__
-#include <OpenCL/opencl.h>
-#else
-#include <CL/cl.h>
-#endif 
-#elif(VKFFT_BACKEND==4)
-#include <ze_api.h>
-#elif(VKFFT_BACKEND==5)
-#ifndef NS_PRIVATE_IMPLEMENTATION
-#define NS_PRIVATE_IMPLEMENTATION
-#endif
-#ifndef CA_PRIVATE_IMPLEMENTATION
-#define CA_PRIVATE_IMPLEMENTATION
-#endif
-#ifndef MTL_PRIVATE_IMPLEMENTATION
-#define MTL_PRIVATE_IMPLEMENTATION
-#endif
-#include "Foundation/Foundation.hpp"
-#include "QuartzCore/QuartzCore.hpp"
-#include "Metal/Metal.hpp"
-#endif
 #include "vkFFT.h"
 #include "utils_VkFFT.h"
 #include "half.hpp"
@@ -126,174 +84,10 @@ VkFFTResult launchVkFFT(VkGPU* vkGPU, uint64_t sample_id, bool file_output, FILE
 	//Sample Vulkan project GPU initialization.
 	VkFFTResult resFFT = VKFFT_SUCCESS;
 
-#if(VKFFT_BACKEND==0)
-	VkResult res = VK_SUCCESS;
-	//create instance - a connection between the application and the Vulkan library 
-	res = createInstance(vkGPU, sample_id);
-	if (res != 0) {
-		//printf("Instance creation failed, error code: %" PRIu64 "\n", res);
-		return VKFFT_ERROR_FAILED_TO_CREATE_INSTANCE;
+	resFFT = backendInitDevice(vkGPU, sample_id);
+	if (resFFT != VKFFT_SUCCESS){
+		return resFFT;
 	}
-	//set up the debugging messenger 
-	res = setupDebugMessenger(vkGPU);
-	if (res != 0) {
-		//printf("Debug messenger creation failed, error code: %" PRIu64 "\n", res);
-		return VKFFT_ERROR_FAILED_TO_SETUP_DEBUG_MESSENGER;
-	}
-	//check if there are GPUs that support Vulkan and select one
-	res = findPhysicalDevice(vkGPU);
-	if (res != 0) {
-		//printf("Physical device not found, error code: %" PRIu64 "\n", res);
-		return VKFFT_ERROR_FAILED_TO_FIND_PHYSICAL_DEVICE;
-	}
-	//create logical device representation
-	res = createDevice(vkGPU, sample_id);
-	if (res != 0) {
-		//printf("Device creation failed, error code: %" PRIu64 "\n", res);
-		return VKFFT_ERROR_FAILED_TO_CREATE_DEVICE;
-	}
-	//create fence for synchronization 
-	res = createFence(vkGPU);
-	if (res != 0) {
-		//printf("Fence creation failed, error code: %" PRIu64 "\n", res);
-		return VKFFT_ERROR_FAILED_TO_CREATE_FENCE;
-	}
-	//create a place, command buffer memory is allocated from
-	res = createCommandPool(vkGPU);
-	if (res != 0) {
-		//printf("Fence creation failed, error code: %" PRIu64 "\n", res);
-		return VKFFT_ERROR_FAILED_TO_CREATE_COMMAND_POOL;
-	}
-	vkGetPhysicalDeviceProperties(vkGPU->physicalDevice, &vkGPU->physicalDeviceProperties);
-	vkGetPhysicalDeviceMemoryProperties(vkGPU->physicalDevice, &vkGPU->physicalDeviceMemoryProperties);
-
-	glslang_initialize_process();//compiler can be initialized before VkFFT
-#elif(VKFFT_BACKEND==1)
-	CUresult res = CUDA_SUCCESS;
-	cudaError_t res2 = cudaSuccess;
-	res = cuInit(0);
-	if (res != CUDA_SUCCESS) return VKFFT_ERROR_FAILED_TO_INITIALIZE;
-	res2 = cudaSetDevice((int)vkGPU->device_id);
-	if (res2 != cudaSuccess) return VKFFT_ERROR_FAILED_TO_SET_DEVICE_ID;
-	res = cuDeviceGet(&vkGPU->device, (int)vkGPU->device_id);
-	if (res != CUDA_SUCCESS) return VKFFT_ERROR_FAILED_TO_GET_DEVICE;
-#elif(VKFFT_BACKEND==2)
-	hipError_t res = hipSuccess;
-	res = hipInit(0);
-	if (res != hipSuccess) return VKFFT_ERROR_FAILED_TO_INITIALIZE;
-	res = hipSetDevice((int)vkGPU->device_id);
-	if (res != hipSuccess) return VKFFT_ERROR_FAILED_TO_SET_DEVICE_ID;
-	res = hipDeviceGet(&vkGPU->device, (int)vkGPU->device_id);
-	if (res != hipSuccess) return VKFFT_ERROR_FAILED_TO_GET_DEVICE;
-#elif(VKFFT_BACKEND==3)
-	cl_int res = CL_SUCCESS;
-	cl_uint numPlatforms;
-	res = clGetPlatformIDs(0, 0, &numPlatforms);
-	if (res != CL_SUCCESS) return VKFFT_ERROR_FAILED_TO_INITIALIZE;
-	cl_platform_id* platforms = (cl_platform_id*)malloc(sizeof(cl_platform_id) * numPlatforms);
-	if (!platforms) return VKFFT_ERROR_MALLOC_FAILED;
-	res = clGetPlatformIDs(numPlatforms, platforms, 0);
-	if (res != CL_SUCCESS) return VKFFT_ERROR_FAILED_TO_INITIALIZE;
-	uint64_t k = 0;
-	for (uint64_t j = 0; j < numPlatforms; j++) {
-		cl_uint numDevices;
-		res = clGetDeviceIDs(platforms[j], CL_DEVICE_TYPE_ALL, 0, 0, &numDevices);
-		cl_device_id* deviceList = (cl_device_id*)malloc(sizeof(cl_device_id) * numDevices);
-		if (!deviceList) return VKFFT_ERROR_MALLOC_FAILED;
-		res = clGetDeviceIDs(platforms[j], CL_DEVICE_TYPE_ALL, numDevices, deviceList, 0);
-		if (res != CL_SUCCESS) return VKFFT_ERROR_FAILED_TO_GET_DEVICE;
-		for (uint64_t i = 0; i < numDevices; i++) {
-			if (k == vkGPU->device_id) {
-				vkGPU->platform = platforms[j];
-				vkGPU->device = deviceList[i];
-				vkGPU->context = clCreateContext(NULL, 1, &vkGPU->device, NULL, NULL, &res);
-				if (res != CL_SUCCESS) return VKFFT_ERROR_FAILED_TO_CREATE_CONTEXT;
-				cl_command_queue commandQueue = clCreateCommandQueue(vkGPU->context, vkGPU->device, 0, &res);
-				if (res != CL_SUCCESS) return VKFFT_ERROR_FAILED_TO_CREATE_COMMAND_QUEUE;
-				vkGPU->commandQueue = commandQueue;
-				i=numDevices;
-				j=numPlatforms;
-			}
-			else {
-				k++;
-			}
-		}
-		free(deviceList);
-	}
-	free(platforms);
-#elif(VKFFT_BACKEND==4)
-	ze_result_t res = ZE_RESULT_SUCCESS;
-	res = zeInit(0);
-	if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_INITIALIZE;
-	uint32_t numDrivers = 0;
-	res = zeDriverGet(&numDrivers, 0);
-	if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_INITIALIZE;
-	ze_driver_handle_t* drivers = (ze_driver_handle_t*)malloc(numDrivers * sizeof(ze_driver_handle_t));
-	if (!drivers) return VKFFT_ERROR_MALLOC_FAILED;
-	res = zeDriverGet(&numDrivers, drivers);
-	if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_INITIALIZE;
-	uint64_t k = 0;
-	for (uint64_t j = 0; j < numDrivers; j++) {
-		uint32_t numDevices = 0;
-		res = zeDeviceGet(drivers[j], &numDevices, nullptr);
-		if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_GET_DEVICE;
-		ze_device_handle_t* deviceList = (ze_device_handle_t*)malloc(numDevices * sizeof(ze_device_handle_t));
-		if (!deviceList) return VKFFT_ERROR_MALLOC_FAILED;
-		res = zeDeviceGet(drivers[j], &numDevices, deviceList);
-		if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_GET_DEVICE;
-		for (uint64_t i = 0; i < numDevices; i++) {
-			if (k == vkGPU->device_id) {
-				vkGPU->driver = drivers[j];
-				vkGPU->device = deviceList[i];
-				ze_context_desc_t contextDescription = {};
-				contextDescription.stype = ZE_STRUCTURE_TYPE_CONTEXT_DESC;
-				res = zeContextCreate(vkGPU->driver, &contextDescription, &vkGPU->context);
-				if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_CREATE_CONTEXT;
-
-				uint32_t queueGroupCount = 0;
-				res = zeDeviceGetCommandQueueGroupProperties(vkGPU->device, &queueGroupCount, 0);
-				if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_CREATE_COMMAND_QUEUE;
-
-				ze_command_queue_group_properties_t* cmdqueueGroupProperties = (ze_command_queue_group_properties_t*)malloc(queueGroupCount * sizeof(ze_command_queue_group_properties_t));
-				if (!cmdqueueGroupProperties) return VKFFT_ERROR_MALLOC_FAILED;
-				res = zeDeviceGetCommandQueueGroupProperties(vkGPU->device, &queueGroupCount, cmdqueueGroupProperties);
-				if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_CREATE_COMMAND_QUEUE;
-
-				uint32_t commandQueueID = -1;
-				for (uint32_t i = 0; i < queueGroupCount; ++i) {
-					if ((cmdqueueGroupProperties[i].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) && (cmdqueueGroupProperties[i].flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY)) {
-						commandQueueID = i;
-						break;
-					}
-				}
-				if (commandQueueID == -1) return VKFFT_ERROR_FAILED_TO_CREATE_COMMAND_QUEUE;
-				vkGPU->commandQueueID = commandQueueID;
-				ze_command_queue_desc_t commandQueueDescription = {};
-				commandQueueDescription.stype = ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC;
-				commandQueueDescription.ordinal = commandQueueID;
-				commandQueueDescription.priority = ZE_COMMAND_QUEUE_PRIORITY_NORMAL;
-				commandQueueDescription.mode = ZE_COMMAND_QUEUE_MODE_DEFAULT;
-				res = zeCommandQueueCreate(vkGPU->context, vkGPU->device, &commandQueueDescription, &vkGPU->commandQueue);
-				if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_CREATE_COMMAND_QUEUE;
-				free(cmdqueueGroupProperties);
-				i=numDevices;
-				j=numDrivers;
-			}
-			else {
-				k++;
-			}
-		}
-
-		free(deviceList);
-	}
-	free(drivers);
-#elif(VKFFT_BACKEND==5)
-    NS::Array* devices = MTL::CopyAllDevices();
-    MTL::Device* device = (MTL::Device*)devices->object(vkGPU->device_id);
-    vkGPU->device = device;
-    MTL::CommandQueue* queue = device->newCommandQueue();
-    vkGPU->queue = queue;
-#endif
 
 	uint64_t isCompilerInitialized = 1;
 
@@ -350,7 +144,7 @@ VkFFTResult launchVkFFT(VkGPU* vkGPU, uint64_t sample_id, bool file_output, FILE
 		break;
 	}
 #endif
-#if(VKFFT_BACKEND==0)
+#ifdef VKFFT_USE_MULTIPLE_BUFFER
     case 10:
     {
         resFFT = sample_10_benchmark_VkFFT_single_multipleBuffers(vkGPU, file_output, output, isCompilerInitialized);
@@ -506,28 +300,11 @@ VkFFTResult launchVkFFT(VkGPU* vkGPU, uint64_t sample_id, bool file_output, FILE
 	}
 #endif
     }
-#if(VKFFT_BACKEND==0)
-	vkDestroyFence(vkGPU->device, vkGPU->fence, NULL);
-	vkDestroyCommandPool(vkGPU->device, vkGPU->commandPool, NULL);
-	vkDestroyDevice(vkGPU->device, NULL);
-	DestroyDebugUtilsMessengerEXT(vkGPU, NULL);
-	vkDestroyInstance(vkGPU->instance, NULL);
-	glslang_finalize_process();//destroy compiler after use
-#elif(VKFFT_BACKEND==1)
-#elif(VKFFT_BACKEND==2)
-#elif(VKFFT_BACKEND==3)
-	res = clReleaseCommandQueue(vkGPU->commandQueue);
-	if (res != CL_SUCCESS) return VKFFT_ERROR_FAILED_TO_RELEASE_COMMAND_QUEUE;
-	clReleaseContext(vkGPU->context);
-#elif(VKFFT_BACKEND==4)
-	res = zeCommandQueueDestroy(vkGPU->commandQueue);
-	if (res != ZE_RESULT_SUCCESS) return VKFFT_ERROR_FAILED_TO_RELEASE_COMMAND_QUEUE;
-	res = zeContextDestroy(vkGPU->context);
-#elif(VKFFT_BACKEND==5)
-    vkGPU->queue->release();
-    vkGPU->device->release();
-    devices->release();
-#endif
+
+	resFFT = backendFreeDevice(vkGPU);
+	if (resFFT != VKFFT_SUCCESS){
+		return resFFT;
+	}
 
 	return resFFT;
 }
@@ -548,9 +325,10 @@ char* getFlagValue(char** start, char** end, const std::string& flag)
 int main(int argc, char* argv[])
 {
 	VkGPU vkGPU = {};
-#if(VKFFT_BACKEND==0)
-	vkGPU.enableValidationLayers = 0;
-#endif
+// Moved to backendInitDevice()
+// #if(VKFFT_BACKEND==0)
+	// vkGPU.enableValidationLayers = 0;
+// #endif
 	bool file_output = false;
 	FILE* output = NULL;
 	int sscanf_res = 0;
@@ -563,19 +341,8 @@ int main(int argc, char* argv[])
 		version_decomposed[1] = (version - version_decomposed[0] * 10000) / 100;
 		version_decomposed[2] = (version - version_decomposed[0] * 10000 - version_decomposed[1] * 100);
 		printf("VkFFT v%d.%d.%d. Author: Tolmachev Dmitrii\n", version_decomposed[0], version_decomposed[1], version_decomposed[2]);
-#if (VKFFT_BACKEND==0)
-		printf("Vulkan backend\n");
-#elif (VKFFT_BACKEND==1)
-		printf("CUDA backend\n");
-#elif (VKFFT_BACKEND==2)
-		printf("HIP backend\n");
-#elif (VKFFT_BACKEND==3)
-		printf("OpenCL backend\n");
-#elif (VKFFT_BACKEND==4)
-		printf("Level Zero backend\n");
-#elif (VKFFT_BACKEND==5)
-        printf("Metal backend\n");
-#endif
+		printf(VKFFT_BACKEND_NAME_STRING);
+		printf(" backend\n");
 		printf("	-h: print help\n");
 		printf("	-devices: print the list of available device ids, used as -d argument\n");
 		printf("	-d X: select device (default 0)\n");
@@ -593,7 +360,7 @@ int main(int argc, char* argv[])
 #ifdef VKFFT_USE_DOUBLEDOUBLE_FP128
 		printf("		9 - FFT + iFFT C2C benchmark 1D batched in double-double emulation of quad precision LUT\n");
 #endif
-#if (VKFFT_BACKEND==0)
+#ifdef VKFFT_USE_MULTIPLE_BUFFER
 		printf("		10 - multiple buffer(4 by default) split version of benchmark 0\n");
 #endif
 #ifdef USE_FFTW
